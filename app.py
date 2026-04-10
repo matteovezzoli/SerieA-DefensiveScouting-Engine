@@ -249,47 +249,36 @@ with tab4:
         Raw defensive stats can be highly misleading. A defender playing for a dominant team (e.g., 65% possession) will naturally attempt fewer tackles than a defender in a low-block team (e.g., 35% possession), simply because they have the ball more often.
         
         **PAdj (Possession-Adjusted)** metrics mathematically adjust these raw numbers as if every team had exactly 50% possession. This completely levels the playing field, allowing us to fairly compare a defender from Inter with a defender from Lecce based on their true defensive output.
-
-        ### The 9 Core Metrics Explained
-        * **Tackles (PAdj):** Volume of ground challenges made to dispossess an opponent.
-        * **Interceptions (PAdj):** Reading the game to cut out passing lanes and intercept the ball.
-        * **Possession Won (PAdj):** Times a player successfully won back possession for their team.
-        * **Blocks (PAdj):** Standing in the way to physically block passes or shots.
-        * **Clearances (PAdj):** Clearing the ball out of the defensive danger zone.
-        * **Ground Duels - Total (PAdj):** Total volume of ground battles engaged.
-        * **Ground Duels %:** Win rate in ground duels (Efficiency).
-        * **Aerial Duels - Total (PAdj):** Total volume of aerial battles engaged.
-        * **Aerial Duels %:** Win rate in aerial duels (Efficiency).
         """)
         
     st.write("---") 
     
-    # The 9 metrics 
-    plot_features = [
-        'tackles_padj', 
-        'ints_padj', 
-        'pos won_padj', 
-        'blocks_padj', 
-        'clearances_padj', 
-        'Ground Duels -total_padj', 
-        'Ground Duels %', 
-        'Aerial Duels -total_padj', 
-        'Aerial Duels %'
-    ]
+    # 1. Map clean labels to technical column names
+    metric_mapping = {
+        "Tackles": "tackles_padj",
+        "Interceptions": "ints_padj",
+        "Possession Won": "pos won_padj",
+        "Blocks": "blocks_padj",
+        "Clearances": "clearances_padj",
+        "Ground Duels Total": "Ground Duels -total_padj",
+        "Ground Duels %": "Ground Duels %",
+        "Aerial Duels Total": "Aerial Duels -total_padj",
+        "Aerial Duels %": "Aerial Duels %"
+    }
     
-    # Keep only columns that actually exist in the DataFrame
-    plot_features = [col for col in plot_features if col in df.columns]
+    available_labels = [label for label, col in metric_mapping.items() if col in df.columns]
     
     col_sc1, col_sc2 = st.columns(2)
     with col_sc1:
-        x_axis = st.selectbox("Select X-Axis Metric:", options=plot_features, index=0)
+        x_label = st.selectbox("Select X-Axis Metric:", options=available_labels, index=0)
+        x_axis = metric_mapping[x_label]
     with col_sc2:
-        y_axis = st.selectbox("Select Y-Axis Metric:", options=plot_features, index=1 if len(plot_features)>1 else 0)
+        y_label = st.selectbox("Select Y-Axis Metric:", options=available_labels, index=1 if len(available_labels)>1 else 0)
+        y_axis = metric_mapping[y_label]
         
-    
     df_plot = df.copy()
     
-    # Map cluster names for a clear legend
+    # Map cluster IDs to descriptive names
     cluster_names_map = {
         0: '0: Proactive',
         1: '1: Positional',
@@ -298,7 +287,7 @@ with tab4:
     }
     df_plot['Tactical Profile'] = df_plot['Cluster'].map(cluster_names_map)
     
-    # Exact color mapping 
+    # Define official color scheme
     color_map = {
         '0: Proactive': 'dodgerblue',
         '1: Positional': 'crimson',
@@ -306,7 +295,7 @@ with tab4:
         '3: Recovery': 'darkorange'
     }
     
-    # Create Interactive Scatter Plot
+    # Create Interactive Scatter Plot 
     fig_scatter = px.scatter(
         df_plot, 
         x=x_axis, 
@@ -315,10 +304,11 @@ with tab4:
         hover_name='name',      
         hover_data=['team', 'Tactical Profile'],    
         color='Tactical Profile',     
-        color_discrete_map=color_map  
+        color_discrete_map=color_map,
+        labels={x_axis: x_label, y_axis: y_label} 
     )
     
-    # Marker and text aesthetics
+    
     fig_scatter.update_traces(
         textposition='top center',               
         textfont=dict(size=10, color='dimgray'), 
@@ -329,12 +319,10 @@ with tab4:
     fig_scatter.add_hline(y=df_plot[y_axis].mean(), line_dash="dash", line_color="gray", opacity=0.5)
     fig_scatter.add_vline(x=df_plot[x_axis].mean(), line_dash="dash", line_color="gray", opacity=0.5)
     
-    
+    # Layout and Legend customization
     fig_scatter.update_layout(
-        title=dict(text=f"{y_axis.replace('_padj', '').replace('_', ' ').title()} vs {x_axis.replace('_padj', '').replace('_', ' ').title()}", font=dict(size=20)),
+        title=dict(text=f"{y_label} vs {x_label}", font=dict(size=20)),
         height=800, 
-        xaxis_title=x_axis.replace('_padj', '').replace('_', ' ').title(),
-        yaxis_title=y_axis.replace('_padj', '').replace('_', ' ').title(),
         legend=dict(
             title="Tactical Profiles",
             orientation="v",
