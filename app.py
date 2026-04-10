@@ -6,10 +6,10 @@ import plotly.graph_objects as go
 import plotly.express as px
 from scipy.spatial.distance import euclidean
 
-# --- PAGE CONFIGURATION ---
+# PAGE CONFIGURATION 
 st.set_page_config(page_title="Serie A Scouting Engine", layout="wide", page_icon="⚽")
 
-# --- DATA LOADING ---
+# DATA LOADING 
 @st.cache_data
 def load_data():
     df = pd.read_csv('processed_defenders_data.csv')
@@ -32,7 +32,7 @@ cluster_colors = {
     3: 'darkorange'      # Recovery
 }
 
-# --- SIDEBAR (ABOUT THE PROJECT) ---
+# SIDEBAR  
 with st.sidebar:
     st.markdown("### 👨‍💻 About the Project")
     st.markdown("""
@@ -48,21 +48,19 @@ with st.sidebar:
     """)
     st.write("---")
     
-    # --- SEZIONE AUTORE (LA TUA FIRMA) ---
     st.markdown("### 👨‍💼 Author")
     st.markdown("**Matteo Vezzoli**")
     st.markdown("*Data Scientist | Sports Analytics*") 
     
-    # Contatti
     st.markdown("""
     [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/matteo-vezzoli83)
     [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/matteovezzoli/)
     """)
-# --- MAIN HEADER ---
+# MAIN HEADER 
 st.title("⚽ Serie A Defensive Scouting Engine")
 st.markdown("Explore the tactical DNA of defenders and discover the ideal profiles for your tactical system.")
 
-# --- TABS (FLAT NAVIGATION) ---
+# TABS 
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🔍 Clone Finder", 
     "🧬 Player DNA", 
@@ -84,7 +82,6 @@ with tab1:
                                      index=player_list.index("Alessandro Bastoni") if "Alessandro Bastoni" in player_list else 0)
         top_n = st.slider("How many clones?", 3, 10, 5)
         
-        # Search Engine Logic
         target_idx = df[df['name'] == target_player].index[0]
         target_coords = df_pca.loc[target_idx, ['PC1', 'PC2', 'PC3', 'PC4']].values
         
@@ -114,7 +111,7 @@ with tab1:
             width='stretch'
         )
 
-        # --- NEW SECTION: SIMILARITY EXPLANATION ---
+        
         with st.expander("💡 How is Similarity % calculated?"):
             st.markdown("""
             The **Similarity %** is driven by an advanced mathematical model, not just a basic comparison of raw numbers:
@@ -246,7 +243,6 @@ with tab4:
     st.header("Interactive Metric Comparison")
     st.markdown("Analyze players across core defensive metrics. The scatter plot highlights different tactical profiles.")
     
-    # --- NEW SECTION: GLOSSARY AND PAdj EXPLANATION ---
     with st.expander("📖 Methodology: What is PAdj & Core Metrics"):
         st.markdown("""
         ### Why PAdj (Possession-Adjusted)?
@@ -266,9 +262,9 @@ with tab4:
         * **Aerial Duels %:** Win rate in aerial duels (Efficiency).
         """)
         
-    st.write("---") # An elegant separator line
+    st.write("---") 
     
-    # The 9 exact metrics requested
+    # The 9 metrics 
     plot_features = [
         'tackles_padj', 
         'ints_padj', 
@@ -281,7 +277,7 @@ with tab4:
         'Aerial Duels %'
     ]
     
-    # Safety check: keep only columns that actually exist in the DataFrame
+    # Keep only columns that actually exist in the DataFrame
     plot_features = [col for col in plot_features if col in df.columns]
     
     col_sc1, col_sc2 = st.columns(2)
@@ -290,7 +286,7 @@ with tab4:
     with col_sc2:
         y_axis = st.selectbox("Select Y-Axis Metric:", options=plot_features, index=1 if len(plot_features)>1 else 0)
         
-    # Create a copy of the DataFrame to avoid modifying the original
+    
     df_plot = df.copy()
     
     # Map cluster names for a clear legend
@@ -302,7 +298,7 @@ with tab4:
     }
     df_plot['Tactical Profile'] = df_plot['Cluster'].map(cluster_names_map)
     
-    # Exact color mapping (Blue for 0, Red for 1, Green for 2, Orange for 3)
+    # Exact color mapping 
     color_map = {
         '0: Proactive': 'dodgerblue',
         '1: Positional': 'crimson',
@@ -315,28 +311,28 @@ with tab4:
         df_plot, 
         x=x_axis, 
         y=y_axis,
-        text='name',                  # This makes the name appear next to the marker
+        text='name',                  
         hover_name='name',      
         hover_data=['team', 'Tactical Profile'],    
         color='Tactical Profile',     
-        color_discrete_map=color_map  # Apply your colors
+        color_discrete_map=color_map  
     )
     
     # Marker and text aesthetics
     fig_scatter.update_traces(
-        textposition='top center',               # Position text above the marker
-        textfont=dict(size=10, color='dimgray'), # Legible but unobtrusive text
-        marker=dict(size=11, opacity=0.85, line=dict(width=1, color='white')) # Clear markers with white borders
+        textposition='top center',               
+        textfont=dict(size=10, color='dimgray'), 
+        marker=dict(size=11, opacity=0.85, line=dict(width=1, color='white')) 
     )
     
-    # Add dashed lines for the mean
+    
     fig_scatter.add_hline(y=df_plot[y_axis].mean(), line_dash="dash", line_color="gray", opacity=0.5)
     fig_scatter.add_vline(x=df_plot[x_axis].mean(), line_dash="dash", line_color="gray", opacity=0.5)
     
-    # Layout formatting and legend positioning on the LEFT
+    
     fig_scatter.update_layout(
         title=dict(text=f"{y_axis.replace('_padj', '').replace('_', ' ').title()} vs {x_axis.replace('_padj', '').replace('_', ' ').title()}", font=dict(size=20)),
-        height=800, # Taller to give the names some breathing room
+        height=800, 
         xaxis_title=x_axis.replace('_padj', '').replace('_', ' ').title(),
         yaxis_title=y_axis.replace('_padj', '').replace('_', ' ').title(),
         legend=dict(
@@ -345,8 +341,8 @@ with tab4:
             yanchor="top",
             y=0.98,
             xanchor="left",
-            x=0.02, # Legend top-left INSIDE the chart
-            bgcolor="rgba(255, 255, 255, 0.85)", # Semi-transparent white background
+            x=0.02, 
+            bgcolor="rgba(255, 255, 255, 0.85)",
             bordercolor="lightgray",
             borderwidth=1
         ),
@@ -361,7 +357,7 @@ with tab5:
     st.header("Team Tactical Identity")
     st.markdown("Analyze how different teams build their defensive lines based on minutes played by each tactical profile.")
     
-    # Mappatura dei nomi dei cluster per coerenza
+    
     cluster_names_map = {
         0: 'Proactive',
         1: 'Box Protector',
@@ -369,8 +365,7 @@ with tab5:
         3: 'Recovery'
     }
 
-    # --- SECTION 1: GLOBAL LEAGUE OVERVIEW ---
-    # Inseriamo il grafico globale in un expander per mantenere pulita l'interfaccia
+    # GLOBAL LEAGUE OVERVIEW 
     with st.expander("🌍 View League-Wide Comparison (All Teams)", expanded=False):
         team_cluster_mins = df.groupby(['team', 'Cluster'])['mins'].sum().unstack(fill_value=0)
         team_dna_pct = team_cluster_mins.div(team_cluster_mins.sum(axis=1), axis=0) * 100
@@ -398,22 +393,22 @@ with tab5:
 
     st.write("---")
 
-    # --- SECTION 2: SPECIFIC TEAM DEEP DIVE ---
+    # SPECIFIC TEAM DEEP DIVE 
     st.subheader("🔍 Specific Team Deep Dive")
     
-    # Selezione della squadra
+    # Teams
     team_list = sorted(df['team'].unique())
     selected_team = st.selectbox("Select a Team to analyze their defensive roster:", team_list)
 
     col_dna, col_roster = st.columns([1, 1.2])
 
-    # Filtriamo i dati solo per la squadra selezionata
+    
     team_df = df[df['team'] == selected_team].copy()
     team_cluster_dist = team_df.groupby('Cluster')['mins'].sum()
     team_total_mins = team_cluster_dist.sum()
     
     with col_dna:
-        # Donut Chart del DNA della singola squadra
+        # Donut Chart 
         labels = [cluster_names_map[i] for i in team_cluster_dist.index]
         values = team_cluster_dist.values
         colors = [cluster_colors[i] for i in team_cluster_dist.index]
@@ -421,19 +416,19 @@ with tab5:
         fig_donut = go.Figure(data=[go.Pie(
             labels=labels, 
             values=values, 
-            hole=.45, # Dimensione del buco centrale (Donut)
+            hole=.45, 
             marker=dict(colors=colors, line=dict(color='white', width=2)),
             textinfo='label+percent'
         )])
         fig_donut.update_layout(
             title=dict(text=f"{selected_team} Tactical Breakdown", font=dict(size=18)),
-            showlegend=False, # Nascondiamo la legenda perché i nomi sono già sul grafico
+            showlegend=False, 
             height=400,
             margin=dict(t=50, b=20, l=20, r=20)
         )
         st.plotly_chart(fig_donut, width='stretch')
 
-        # Insight Dinamico (Generazione automatica del testo)
+        
         dominant_cluster = team_cluster_dist.idxmax()
         dominant_pct = (team_cluster_dist.max() / team_total_mins) * 100
         st.info(f"💡 **Tactical Insight:** The defensive identity of {selected_team} is primarily driven by **{cluster_names_map[dominant_cluster]}** defenders, accounting for **{dominant_pct:.1f}%** of their total defensive minutes.")
@@ -441,14 +436,14 @@ with tab5:
     with col_roster:
         st.write(f"**{selected_team} Defensive Roster**")
         
-        # Prepariamo la tabella dei giocatori per quella squadra
+        # Table of the team's players
         team_df['Profile'] = team_df['Cluster'].map(cluster_names_map)
         display_df = team_df[['name', 'Profile', 'mins']].sort_values(by='mins', ascending=False)
         display_df = display_df.rename(columns={'name': 'Player', 'mins': 'Minutes Played'})
         
-        # Mostriamo la tabella con un gradiente sui minuti giocati (chi gioca di più è più scuro)
+        
         st.dataframe(
             display_df.style.background_gradient(cmap='Blues', subset=['Minutes Played']),
             width='stretch',
-            hide_index=True # Rimuove la colonna dei numeri di riga a sinistra per un look più pulito
+            hide_index=True 
         )
