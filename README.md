@@ -59,8 +59,7 @@ To run this application on your local machine:
 
 ```bash
 # Clone the repository
-git clone [https://github.com/matteovezzoli/SerieA-Defensive-Scouting-Engine.git](https://github.com/matteovezzoli/SerieA-Defensive-Scouting-Engine.git)
-
+git clone https://github.com/matteovezzoli/SerieA-DefensiveScouting-Engine.git
 # Install requirements
 pip install -r requirements.txt
 
