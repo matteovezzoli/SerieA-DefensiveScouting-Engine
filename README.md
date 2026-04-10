@@ -6,6 +6,10 @@
 ![Scikit-Learn](https://img.shields.io/badge/Machine_Learning-Scikit_Learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
 ![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
 
+---
+🚀 **[Live App: Explore the Scouting Engine](https://seriea-defensive-engine.streamlit.app/)**
+---
+
 ## 📌 Project Overview
 This project presents an analytical study of Serie A center-backs for the 2025/2026 season. The goal is to move beyond standard volume stats by grouping defenders based on their actual playing style. 
 
