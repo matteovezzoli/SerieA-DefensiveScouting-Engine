@@ -40,7 +40,7 @@ with st.sidebar:
     
     **Under the hood:**
     * **Data Source:** Raw defensive metrics powered by **Opta Analyst / Stats Perform**.
-    * **Dataset Scope:** Serie A Center-Backs (Current Season) with >800 minutes played.
+    * **Dataset Scope:** Serie A Center-Backs (Current Season: March 2026) with >800 minutes played.
     * **Data Standardization:** Possession-Adjusted (PAdj) metrics.
     * **Dimensionality Reduction:** Principal Component Analysis (PCA).
     * **Machine Learning:** K-Means Clustering for tactical profiling.
