@@ -6,10 +6,10 @@ import plotly.graph_objects as go
 import plotly.express as px
 from scipy.spatial.distance import euclidean
 
-# PAGE CONFIGURATION 
+# Page configuration  
 st.set_page_config(page_title="Serie A Scouting Engine", layout="wide", page_icon="⚽")
 
-# DATA LOADING 
+# Data Loading 
 @st.cache_data
 def load_data():
     df = pd.read_csv('processed_defenders_data.csv')
@@ -32,7 +32,7 @@ cluster_colors = {
     3: 'darkorange'      # Recovery
 }
 
-# SIDEBAR  
+# Sidebar
 with st.sidebar:
     st.markdown("### 👨‍💻 About the Project")
     st.markdown("""
@@ -142,6 +142,7 @@ with tab1:
             height=600
         )
         st.plotly_chart(fig_radar, width='stretch')
+
 # ==========================================
 # TAB 2: PLAYER DNA
 # ==========================================
@@ -171,17 +172,29 @@ with tab2:
     vals = player_data[perc_cols].values
     labels = ['C0: Proactive', 'C1: Positional', 'C2: Tactical', 'C3: Recovery']
     
+    # Create Bar Chart with embedded percentage labels
     fig_bar = go.Figure(go.Bar(
-        x=vals, y=labels, orientation='h',
+        x=vals, 
+        y=labels, 
+        orientation='h',
+        text=[f"{v:.1f}%" for v in vals], # Format values to 1 decimal place (e.g., 35.2%)
+        textposition='auto',              # Smart positioning: inside if bar is long, outside if short
         marker_color=[cluster_colors[0], cluster_colors[1], cluster_colors[2], cluster_colors[3]]
     ))
+    
+    # Apply font styling for maximum readability on the bars
+    fig_bar.update_traces(textfont=dict(size=14, color='black'))
+    
+    # Clean layout configuration
     fig_bar.update_layout(
-        title=f"Tactical Membership % (DNA Breakdown) for {selected_player}", 
+        title=dict(text=f"<b>Tactical Membership % for {selected_player}</b>", font=dict(size=16)), 
         xaxis_title="Percentage Match", 
-        xaxis_range=[0, 100],
+        xaxis_range=[0, 105], 
         height=350,
-        margin=dict(l=20, r=20, t=40, b=20)
+        margin=dict(l=20, r=40, t=50, b=20), 
+        template="plotly_white"              
     )
+    
     st.plotly_chart(fig_bar, width='stretch')
     
     # Methodology Expander
@@ -209,6 +222,7 @@ with tab2:
 # ==========================================
 # TAB 3: MARKET EXPLORER
 # ==========================================
+        
 with tab3:
     st.header("Find Top Players by Tactical Profile")
     col_m1, col_m2, col_m3 = st.columns(3)
@@ -241,9 +255,10 @@ with tab3:
 # ==========================================
 # TAB 4: METRIC EXPLORER
 # ==========================================
+    
 with tab4:
     st.header("Interactive Metric Comparison")
-    st.markdown("Analyze players across core defensive metrics. The scatter plot highlights different tactical profiles.")
+    st.markdown("Analyze players across core defensive metrics. The scatter plot dynamically highlights tactical extremes.")
     
     with st.expander("📖 Methodology: What is PAdj & Core Metrics"):
         st.markdown("""
@@ -266,7 +281,7 @@ with tab4:
         
     st.write("---") 
     
-    # 1. Map clean labels to technical column names
+    # Map clean labels to technical column names
     metric_mapping = {
         "Tackles": "tackles_padj",
         "Interceptions": "ints_padj",
@@ -279,7 +294,6 @@ with tab4:
         "Aerial Duels %": "Aerial Duels %"
     }
     
-    # Ensure only existing columns are available
     available_labels = [label for label, col in metric_mapping.items() if col in df.columns]
     
     col_sc1, col_sc2 = st.columns(2)
@@ -292,66 +306,94 @@ with tab4:
         
     df_plot = df.copy()
     
-    # Map cluster IDs to descriptive names
-    cluster_names_map = {
-        0: '0: Proactive',
-        1: '1: Positional',
-        2: '2: Tactical',
-        3: '3: Recovery'
-    }
+    mean_x = df_plot[x_axis].mean()
+    mean_y = df_plot[y_axis].mean()
+    std_x = df_plot[x_axis].std()
+    std_y = df_plot[y_axis].std()
+
+    # Calculate normalized Euclidean distance (Z-Score approach) 
+    # This prevents variables with larger scales (like %) from dominating the distance calculation
+    df_plot['dist_from_mean_norm'] = (
+        ((df_plot[x_axis] - mean_x) / std_x)**2 + 
+        ((df_plot[y_axis] - mean_y) / std_y)**2
+    )**0.5
+
+    # Extract the names of the Top 3 players in the Top-Right quadrant based on normalized distance
+    top_right_3 = df_plot[(df_plot[x_axis] > mean_x) & (df_plot[y_axis] > mean_y)]\
+                  .nlargest(3, 'dist_from_mean_norm')['name'].tolist()
+
+    # Extract the names of the Top 3 players in the Bottom-Left quadrant based on normalized distance
+    bottom_left_3 = df_plot[(df_plot[x_axis] < mean_x) & (df_plot[y_axis] < mean_y)]\
+                    .nlargest(3, 'dist_from_mean_norm')['name'].tolist()
+
+    # Combined list of players to highlight (bold) 
+    dynamic_highlights = top_right_3 + bottom_left_3
+    # -----------------------------------------------------------------
+    
+    cluster_names_map = {0: '0: Proactive', 1: '1: Positional', 2: '2: Tactical', 3: '3: Recovery'}
     df_plot['Tactical Profile'] = df_plot['Cluster'].map(cluster_names_map)
+    color_map = {'0: Proactive': 'dodgerblue', '1: Positional': 'crimson', '2: Tactical': 'mediumseagreen', '3: Recovery': 'darkorange'}
     
-    # Define official color scheme
-    color_map = {
-        '0: Proactive': 'dodgerblue',
-        '1: Positional': 'crimson',
-        '2: Tactical': 'mediumseagreen',
-        '3: Recovery': 'darkorange'
-    }
+    fig_scatter = go.Figure()
+
+    # Create the chart iterating over clusters to ensure perfect styling for every single dot
+    for cluster_name, color in color_map.items():
+        df_sub = df_plot[df_plot['Tactical Profile'] == cluster_name]
+        
+        if not df_sub.empty:
+            texts = []
+            text_colors = []
+            text_sizes = []
+            marker_sizes = []
+            
+            # Apply styling player by player
+            for _, row in df_sub.iterrows():
+                name = row['name']
+                if name in dynamic_highlights:
+                    texts.append(f"<b>{name}</b>") 
+                    text_colors.append("black")    
+                    text_sizes.append(13)          
+                    marker_sizes.append(14)        
+                else:
+                    texts.append(name)             
+                    text_colors.append("silver")   
+                    text_sizes.append(9)           
+                    marker_sizes.append(10)        
+            
+            # Add the trace for this specific Cluster
+            fig_scatter.add_trace(go.Scatter(
+                x=df_sub[x_axis],
+                y=df_sub[y_axis],
+                mode='markers+text',
+                name=cluster_name,
+                text=texts,
+                textposition='top center',
+                textfont=dict(color=text_colors, size=text_sizes),
+                marker=dict(color=color, size=marker_sizes, line=dict(width=1, color='white'), opacity=0.85),
+                hoverinfo='text',
+                hovertext=df_sub['name'] + " (" + df_sub['team'] + ")"
+            ))
     
-    # Create Interactive Scatter Plot with clean labels
-    fig_scatter = px.scatter(
-        df_plot, 
-        x=x_axis, 
-        y=y_axis,
-        text='name',                  
-        hover_name='name',      
-        hover_data=['team', 'Tactical Profile'],    
-        color='Tactical Profile',     
-        color_discrete_map=color_map,
-        labels={x_axis: x_label, y_axis: y_label} 
-    )
+    # Add average reference lines
+    fig_scatter.add_hline(y=mean_y, line_dash="dash", line_color="gray", opacity=0.5)
+    fig_scatter.add_vline(x=mean_x, line_dash="dash", line_color="gray", opacity=0.5)
     
-    # Marker and text aesthetics
-    fig_scatter.update_traces(
-        textposition='top center',               
-        textfont=dict(size=10, color='dimgray'), 
-        marker=dict(size=11, opacity=0.85, line=dict(width=1, color='white')) 
-    )
-    
-    # Add League Average reference lines
-    fig_scatter.add_hline(y=df_plot[y_axis].mean(), line_dash="dash", line_color="gray", opacity=0.5)
-    fig_scatter.add_vline(x=df_plot[x_axis].mean(), line_dash="dash", line_color="gray", opacity=0.5)
-    
-    # Layout and Legend customization
+    # Clean layout configuration
     fig_scatter.update_layout(
-        title=dict(text=f"{y_label} vs {x_label}", font=dict(size=20)),
+        title=dict(text=f"<b>{y_label} vs {x_label}</b><br><span style='font-size:12px'>Top 3 extremes (Top-Right & Bottom-Left) highlighted </span>", font=dict(size=20)),
         height=800, 
+        xaxis_title=x_label,
+        yaxis_title=y_label,
         legend=dict(
-            title="Tactical Profiles",
-            orientation="v",
-            yanchor="top",
-            y=0.98,
-            xanchor="left",
-            x=0.02, 
-            bgcolor="rgba(255, 255, 255, 0.85)",
-            bordercolor="lightgray",
-            borderwidth=1
+            title="Tactical Profiles", orientation="v", yanchor="top", y=0.98, xanchor="left", x=0.02, 
+            bgcolor="rgba(255, 255, 255, 0.85)", bordercolor="lightgray", borderwidth=1
         ),
-        margin=dict(l=40, r=40, t=60, b=40)
+        margin=dict(l=40, r=40, t=80, b=40),
+        template="plotly_white"
     )
     
-    st.plotly_chart(fig_scatter, width='stretch')
+    st.plotly_chart(fig_scatter, use_container_width=True)
+    
 # ==========================================
 # TAB 5: TEAM DNA
 # ==========================================
