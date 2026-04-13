@@ -72,6 +72,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # ==========================================
 # TAB 1: CLONE FINDER
 # ==========================================
+
 with tab1:
     st.header("Find the Ideal Tactical Replacement")
     
@@ -144,6 +145,7 @@ with tab1:
 # ==========================================
 # TAB 2: PLAYER DNA
 # ==========================================
+
 with tab2:
     st.header("Individual Profile Analysis")
     selected_player = st.selectbox("Select a player to view their DNA:", player_list, key='player_dna')
@@ -249,6 +251,17 @@ with tab4:
         Raw defensive stats can be highly misleading. A defender playing for a dominant team (e.g., 65% possession) will naturally attempt fewer tackles than a defender in a low-block team (e.g., 35% possession), simply because they have the ball more often.
         
         **PAdj (Possession-Adjusted)** metrics mathematically adjust these raw numbers as if every team had exactly 50% possession. This completely levels the playing field, allowing us to fairly compare a defender from Inter with a defender from Lecce based on their true defensive output.
+
+        ### The 9 Core Metrics Explained
+        * **Tackles (PAdj):** Volume of ground challenges made to dispossess an opponent.
+        * **Interceptions (PAdj):** Reading the game to cut out passing lanes and intercept the ball.
+        * **Possession Won (PAdj):** Times a player successfully won back possession for their team.
+        * **Blocks (PAdj):** Standing in the way to physically block passes or shots.
+        * **Clearances (PAdj):** Clearing the ball out of the defensive danger zone.
+        * **Ground Duels - Total (PAdj):** Total volume of ground battles engaged.
+        * **Ground Duels %:** Win rate in ground duels (Efficiency).
+        * **Aerial Duels - Total (PAdj):** Total volume of aerial battles engaged.
+        * **Aerial Duels %:** Win rate in aerial duels (Efficiency).
         """)
         
     st.write("---") 
@@ -266,6 +279,7 @@ with tab4:
         "Aerial Duels %": "Aerial Duels %"
     }
     
+    # Ensure only existing columns are available
     available_labels = [label for label, col in metric_mapping.items() if col in df.columns]
     
     col_sc1, col_sc2 = st.columns(2)
@@ -295,7 +309,7 @@ with tab4:
         '3: Recovery': 'darkorange'
     }
     
-    # Create Interactive Scatter Plot 
+    # Create Interactive Scatter Plot with clean labels
     fig_scatter = px.scatter(
         df_plot, 
         x=x_axis, 
@@ -308,14 +322,14 @@ with tab4:
         labels={x_axis: x_label, y_axis: y_label} 
     )
     
-    
+    # Marker and text aesthetics
     fig_scatter.update_traces(
         textposition='top center',               
         textfont=dict(size=10, color='dimgray'), 
         marker=dict(size=11, opacity=0.85, line=dict(width=1, color='white')) 
     )
     
-    
+    # Add League Average reference lines
     fig_scatter.add_hline(y=df_plot[y_axis].mean(), line_dash="dash", line_color="gray", opacity=0.5)
     fig_scatter.add_vline(x=df_plot[x_axis].mean(), line_dash="dash", line_color="gray", opacity=0.5)
     
