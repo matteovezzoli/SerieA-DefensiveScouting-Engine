@@ -54,7 +54,7 @@ with st.sidebar:
     
     st.markdown("""
     [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/matteo-vezzoli83)
-    [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/matteovezzoli/)
+    [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/matteovezzoli/SerieA-DefensiveScouting-Engine)
     """)
 # MAIN HEADER 
 st.title("⚽ Serie A Defensive Scouting Engine")
@@ -312,21 +312,20 @@ with tab4:
     std_y = df_plot[y_axis].std()
 
     # Calculate normalized Euclidean distance (Z-Score approach) 
-    # This prevents variables with larger scales (like %) from dominating the distance calculation
     df_plot['dist_from_mean_norm'] = (
         ((df_plot[x_axis] - mean_x) / std_x)**2 + 
         ((df_plot[y_axis] - mean_y) / std_y)**2
     )**0.5
 
-    # Extract the names of the Top 3 players in the Top-Right quadrant based on normalized distance
+    # Extract the names of the Top 3 players in the Top-Right quadrant
     top_right_3 = df_plot[(df_plot[x_axis] > mean_x) & (df_plot[y_axis] > mean_y)]\
                   .nlargest(3, 'dist_from_mean_norm')['name'].tolist()
 
-    # Extract the names of the Top 3 players in the Bottom-Left quadrant based on normalized distance
+    # Extract the names of the Top 3 players in the Bottom-Left quadrant
     bottom_left_3 = df_plot[(df_plot[x_axis] < mean_x) & (df_plot[y_axis] < mean_y)]\
                     .nlargest(3, 'dist_from_mean_norm')['name'].tolist()
 
-    # Combined list of players to highlight (bold) 
+    # Combined list of players to highlight
     dynamic_highlights = top_right_3 + bottom_left_3
     # -----------------------------------------------------------------
     
@@ -336,7 +335,7 @@ with tab4:
     
     fig_scatter = go.Figure()
 
-    # Create the chart iterating over clusters to ensure perfect styling for every single dot
+    # Create the chart iterating over clusters
     for cluster_name, color in color_map.items():
         df_sub = df_plot[df_plot['Tactical Profile'] == cluster_name]
         
@@ -351,12 +350,12 @@ with tab4:
                 name = row['name']
                 if name in dynamic_highlights:
                     texts.append(f"<b>{name}</b>") 
-                    text_colors.append("black")    
+                    text_colors.append(color)    
                     text_sizes.append(13)          
                     marker_sizes.append(14)        
                 else:
                     texts.append(name)             
-                    text_colors.append("silver")   
+                    text_colors.append("dimgray") 
                     text_sizes.append(9)           
                     marker_sizes.append(10)        
             
@@ -378,7 +377,7 @@ with tab4:
     fig_scatter.add_hline(y=mean_y, line_dash="dash", line_color="gray", opacity=0.5)
     fig_scatter.add_vline(x=mean_x, line_dash="dash", line_color="gray", opacity=0.5)
     
-    # Clean layout configuration
+    # Clean layout configuration 
     fig_scatter.update_layout(
         title=dict(text=f"<b>{y_label} vs {x_label}</b><br><span style='font-size:12px'>Top 3 extremes (Top-Right & Bottom-Left) highlighted </span>", font=dict(size=20)),
         height=800, 
@@ -386,14 +385,15 @@ with tab4:
         yaxis_title=y_label,
         legend=dict(
             title="Tactical Profiles", orientation="v", yanchor="top", y=0.98, xanchor="left", x=0.02, 
-            bgcolor="rgba(255, 255, 255, 0.85)", bordercolor="lightgray", borderwidth=1
+            bgcolor="rgba(0, 0, 0, 0)",                
+            bordercolor="rgba(128, 128, 128, 0.4)",    
+            borderwidth=1
         ),
-        margin=dict(l=40, r=40, t=80, b=40),
-        template="plotly_white"
+        margin=dict(l=40, r=40, t=80, b=40)
+        
     )
     
     st.plotly_chart(fig_scatter, use_container_width=True)
-    
 # ==========================================
 # TAB 5: TEAM DNA
 # ==========================================
@@ -491,3 +491,4 @@ with tab5:
             width='stretch',
             hide_index=True 
         )
+
