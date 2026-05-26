@@ -109,7 +109,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 with tab1:
     st.header("Find the Ideal Tactical Replacement")
     
-    col1, col2 = st.columns([1, 2])
+    col1, col2 = st.columns([1.4, 2])
     
     with col1:
         target_player = st.selectbox("Select Target Player:", player_list,
@@ -159,7 +159,7 @@ with tab1:
                 'Player': st.column_config.TextColumn(width='medium'),
                 'Team': st.column_config.TextColumn(width='medium'),
                 'Profile': st.column_config.TextColumn(width='medium'),
-                'Similarity %': st.column_config.NumberColumn(format='%.1f%%', width='small'),
+                'Similarity %': st.column_config.NumberColumn(format='%.1f%%', width='medium'),
             }
         )
 
@@ -227,19 +227,19 @@ with tab2:
     cluster_definitions = {
         "Aggressor": {
             "name": "Aggressor / Ball-Winner",
-            "desc": "League leaders in defensive volume: top tier in tackles (+27%), interceptions (+27%), possessions won (+38%) and ground duels engaged (+30%). Typical centre-back of dominant, high-line teams that defend forward and recover the ball in midfield areas."
+            "desc": "League leaders in defensive volume: top tier in tackles (+27%), interceptions (+27%), possessions won (+38%) and ground duels engaged (+30%). Typical centre-back of dominant, high-line teams that defend forward and recover the ball in midfield areas (Inter, Roma, Napoli, Juventus, Atalanta)."
         },
         "Aerial Stopper": {
             "name": "Aerial Stopper",
-            "desc": "League leaders in clearances (+37%) and aerial win rate (~65%, +13%), with very high aerial volume (+26%) and above-average blocks (+21%) but reduced ground engagement (-12%). Classic stay-at-home centre-back of low/mid-block teams: holds the line, dominates the box, lets the ball come to them."
+            "desc": "League leaders in clearances (+37%) and aerial win rate (~65%, +13%), with very high aerial volume (+26%) and above-average blocks (+21%) but reduced ground engagement (-12%). Classic stay-at-home centre-back of low/mid-block teams (Hellas Verona, Como, Lecce): holds the line, dominates the box, lets the ball come to them."
         },
         "Ground Specialist": {
             "name": "Ground Specialist",
-            "desc": "Decent ground engagement (Ground Duels +10%) but a marked weakness in the air: very low aerial volume (-29%) and the lowest aerial win rate of the four profiles (~49%, -15%). Fits as a wide centre-back in a back three or as a technical defender in possession-based sides where the team prevents aerial duels from occurring."
+            "desc": "Decent ground engagement (Ground Duels +10%) but a marked weakness in the air: very low aerial volume (-29%) and the lowest aerial win rate of the four profiles (~49%, -15%). Fits as a wide centre-back in a back three or as a technical defender in possession-based sides where the team prevents aerial duels from occurring. Most represented at: Milan, Cagliari, Fiorentina."
         },
         "Coverage Defender": {
             "name": "Coverage Defender",
-            "desc": "Below average across most defensive volume metrics: tackles -19%, possessions won -24%, ground duels engaged -20%, aerial duels engaged -12%. Often a fullback redeployed as a wide centre-back, or a defender in a deep block whose role prioritises shape and spatial cover over direct engagement. Low engagement is a tactical signature, not necessarily a weakness."
+            "desc": "Below average across most defensive volume metrics: tackles -19%, possessions won -24%, ground duels engaged -20%, aerial duels engaged -12%. Common in deep-block teams that funnel play away from the centre-backs (Cremonese, Parma, Pisa). Often also a fullback redeployed as a wide centre-back. Low engagement is a tactical signature, not necessarily a weakness."
         }
     }
 
@@ -268,7 +268,7 @@ with tab2:
         identity_desc = "spread across multiple profiles, no dominant trait"
     st.markdown(
         f"{identity_color} **Tactical Identity: {identity_label}** "
-        f"(top match = {max_pct:.1f}% on {player_profile_name}) — *{identity_desc}*"
+        f"(top match = {max_pct:.1f}% on {player_profile_name}). *{identity_desc}*"
     )
     
     # Create Bar Chart with embedded percentage labels
@@ -331,19 +331,19 @@ with tab2:
 
         **🔵 Aggressor / Ball-Winner**
         * **Data Signature:** Tackles +27%, Interceptions +27%, Possessions Won +38%, Ground Duels engaged +30%, Aerial Duels engaged +22%. The highest defensive volume profile in the league.
-        * **Tactical Profile:** Centre-backs of dominant, high-line teams. They step up rather than drop, win the ball back in midfield areas, and engage aggressively across the pitch. Typical of Roma, Inter, Napoli, Atalanta.
+        * **Tactical Profile:** Centre-backs of dominant, high-line teams. They step up rather than drop, win the ball back in midfield areas, and engage aggressively across the pitch. Top sources: Inter, Roma, Napoli, Juventus, Atalanta.
 
         **🔴 Aerial Stopper**
         * **Data Signature:** Clearances +37%, Aerial Duels engaged +26%, Aerial win rate ~65% (+13%), Blocks +21%. Ground engagement is lower than the league average (Tackles -3%, Ground Duels -12%).
-        * **Tactical Profile:** Classic stay-at-home centre-back. Holds the defensive line, absorbs pressure, dominates the box aerially. Common in low/mid-block sides (Verona, Lecce, Torino, Genoa, Como).
+        * **Tactical Profile:** Classic stay-at-home centre-back. Holds the defensive line, absorbs pressure, dominates the box aerially. Top sources: Hellas Verona, Como, Lecce.
 
         **🟢 Ground Specialist**
         * **Data Signature:** Decent ground volume (Ground Duels +10%, Tackles +3%) but a clear aerial weakness: Aerial Duels engaged -29% and the lowest Aerial win rate of the four profiles (~49%, -15%). Clearances are also low (-28%).
-        * **Tactical Profile:** Defenders who thrive in ground actions but are physically out-matched in the air. Often deployed as a wide centre-back in a back three or as a technical defender in possession-based teams that prevent aerial duels from happening (Cagliari, Milan, Sassuolo).
+        * **Tactical Profile:** Defenders who thrive in ground actions but are physically out-matched in the air. Often deployed as a wide centre-back in a back three or as a technical defender in possession-based teams that prevent aerial duels from happening. Top sources: Milan, Cagliari, Fiorentina.
 
         **🟠 Coverage Defender**
         * **Data Signature:** Below league average across most volume metrics: Tackles -19%, Pos Won -24%, Ground Duels engaged -20%, Aerial Duels engaged -12%. Blocks slightly above average (+14%).
-        * **Tactical Profile:** Two overlapping sub-profiles emerge here: fullbacks redeployed as wide centre-backs, and defenders in deep blocks where the team funnels play away from them. Low engagement is a tactical signature, not necessarily a quality judgement. The data alone cannot distinguish "smart positioning" from "limited involvement", so the label is deliberately neutral.
+        * **Tactical Profile:** Two overlapping sub-profiles emerge here: fullbacks redeployed as wide centre-backs, and defenders in deep blocks where the team funnels play away from them. Low engagement is a tactical signature, not necessarily a quality judgement. Top sources: Cremonese, Parma, Pisa.
         """)
 
 # ==========================================
@@ -429,9 +429,13 @@ with tab3:
     with st.expander("📖 Methodology: What is PAdj & Core Metrics"):
         st.markdown("""
         ### Why PAdj (Possession-Adjusted)?
-        Raw defensive stats can be highly misleading. A defender playing for a dominant team (e.g., 65% possession) will naturally attempt fewer tackles than a defender in a low-block team (e.g., 35% possession), simply because they have the ball more often.
-        
-        **PAdj (Possession-Adjusted)** metrics mathematically adjust these raw numbers as if every team had exactly 50% possession. This completely levels the playing field, allowing us to fairly compare a defender from Inter with a defender from Lecce based on their true defensive output.
+        Defensive actions only happen when the **opponent** has the ball. A centre-back of a high-possession team is less exposed to defensive situations than one of a low-block side, simply because the ball spends less time near his own goal. Raw per-90 stats therefore penalize defenders of dominant teams: they get fewer chances to act, not because they're worse, but because they're defending less often.
+
+        **PAdj rescales every defensive count as if the player's team had exactly 50% possession**, so the metric reflects defensive **rate per unit of out-of-possession time**, not per match clock. The standard Opta formula is:
+
+        $$\\text{PAdj stat} = \\text{Raw stat per 90} \\times \\frac{50}{\\text{Opponent possession \\%}}$$
+
+        After this adjustment, defenders from high- and low-possession teams are directly comparable on the same scale. Win-rate metrics (Ground/Aerial Duels %) are already ratios, so they don't need PAdj adjustment.
 
         ### The 9 Core Metrics Explained
         * **Tackles (PAdj):** Volume of ground challenges made to dispossess an opponent.
@@ -581,6 +585,10 @@ with tab3:
     )
 
     st.plotly_chart(fig_scatter, width='stretch')
+    st.caption(
+        "All per-90 volume metrics shown here are **possession-adjusted (PAdj)** — rescaled as if every team had 50% possession, so defenders from high- and low-possession teams are directly comparable. "
+        "Win-rate metrics (Ground Duels %, Aerial Duels %) are already ratios and not adjusted. See the methodology expander above for details."
+    )
 
     # Top / Bottom performers callout
     col_top, col_bot = st.columns(2)

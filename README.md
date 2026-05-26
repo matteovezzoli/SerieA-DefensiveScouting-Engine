@@ -23,10 +23,10 @@ The clustering pipeline identifies four data-driven profiles among Serie A cente
 
 | Profile | Color | Data Signature (vs. league avg.) | Football Interpretation |
 |---|---|---|---|
-| **Aggressor / Ball-Winner** | 🔵 | Tackles +27%, Interceptions +27%, Possessions Won +38%, Ground Duels engaged +30%, Aerial Duels engaged +22% | Centre-backs of dominant, high-line teams. Step up rather than drop, recover the ball forward. Typical of Roma, Inter, Napoli, Atalanta. |
-| **Aerial Stopper** | 🔴 | Clearances +37%, Aerial Duels engaged +26%, Aerial win rate ~65% (+13%), Blocks +21% | Classic stay-at-home centre-back. Holds the line, absorbs pressure, dominates the box. Common in low/mid-block sides (Verona, Lecce, Como). |
-| **Ground Specialist** | 🟢 | Ground Duels +10%, Tackles +3%, but Aerial Duels engaged -29% and Aerial win rate ~49% (-15%) | Strong on the ground but physically out-matched in the air. Fits as a wide centre-back in a back three or as a technical defender in possession-based sides. |
-| **Coverage Defender** | 🟠 | Tackles -19%, Possessions Won -24%, Ground Duels -20%, Aerial Duels -12%, Blocks +14% | Two overlapping sub-profiles: fullbacks redeployed wide in a back three, and defenders in deep blocks where play is funneled away. Low engagement is a tactical signature, not necessarily a quality judgement. |
+| **Aggressor / Ball-Winner** | 🔵 | Tackles +27%, Interceptions +27%, Possessions Won +38%, Ground Duels engaged +30%, Aerial Duels engaged +22% | Centre-backs of dominant, high-line teams. Step up rather than drop, recover the ball forward. Top sources: Inter, Roma, Napoli, Juventus, Atalanta. |
+| **Aerial Stopper** | 🔴 | Clearances +37%, Aerial Duels engaged +26%, Aerial win rate ~65% (+13%), Blocks +21% | Classic stay-at-home centre-back. Holds the line, absorbs pressure, dominates the box. Top sources: Hellas Verona, Como, Lecce, Sassuolo, Genoa. |
+| **Ground Specialist** | 🟢 | Ground Duels +10%, Tackles +3%, but Aerial Duels engaged -29% and Aerial win rate ~49% (-15%) | Strong on the ground but physically out-matched in the air. Fits as a wide centre-back in a back three or as a technical defender in possession-based sides. Top sources: Cagliari, Milan, Fiorentina, Sassuolo. |
+| **Coverage Defender** | 🟠 | Tackles -19%, Possessions Won -24%, Ground Duels -20%, Aerial Duels -12%, Blocks +14% | Two overlapping sub-profiles: fullbacks redeployed wide in a back three, and defenders in deep blocks where play is funneled away. Top sources: Cremonese, Parma, Torino, Pisa. |
 
 ---
 
