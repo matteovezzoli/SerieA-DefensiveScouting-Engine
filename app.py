@@ -4,7 +4,7 @@ import numpy as np
 import json
 import plotly.graph_objects as go
 import plotly.express as px
-from scipy.spatial.distance import euclidean
+from scipy.spatial.distance import euclidean, pdist
 
 # Page configuration  
 st.set_page_config(page_title="Serie A Scouting Engine", layout="wide", page_icon="⚽")
@@ -24,34 +24,65 @@ df, df_pca, radar_features = load_data()
 df['name'] = df['name'].str.strip()
 player_list = sorted(df['name'].unique())
 
-# Official cluster colors
-cluster_colors = {
-    0: 'dodgerblue',     # Proactive
-    1: 'crimson',        # Positional
-    2: 'mediumseagreen', # Balanced
-    3: 'darkorange'      # Recovery
+# Pre-compute min/max of pairwise distances in PCA space.
+# Used by the Similarity% formula in the Clone Finder tab.
+@st.cache_data
+def get_distance_bounds(df_pca):
+    coords = df_pca[['PC1', 'PC2', 'PC3', 'PC4']].values
+    pairwise = pdist(coords, metric='euclidean')
+    return float(pairwise.min()), float(pairwise.max())
+
+DIST_MIN, DIST_MAX = get_distance_bounds(df_pca)
+
+# Cluster naming is loaded dynamically from cluster_name_map.json
+# so the notebook can re-assign cluster integer IDs without breaking the app.
+try:
+    with open('cluster_name_map.json', 'r') as f:
+        _name_map_raw = json.load(f)
+    CLUSTER_NAMES = {int(k): v for k, v in _name_map_raw.items()}
+except FileNotFoundError:
+    # Hard-coded fallback if the JSON is missing.
+    CLUSTER_NAMES = {0: "Aggressor", 1: "Aerial Stopper", 2: "Ground Specialist", 3: "Coverage Defender"}
+
+# Stable colour palette keyed by profile name (not by cluster integer)
+PROFILE_COLORS = {
+    'Aggressor':          'dodgerblue',
+    'Aerial Stopper':     'crimson',
+    'Ground Specialist':  'mediumseagreen',
+    'Coverage Defender':  'darkorange',
 }
+# Build cluster_colors dict for downstream code (cluster integer -> hex/name color)
+cluster_colors = {c: PROFILE_COLORS[CLUSTER_NAMES[c]] for c in CLUSTER_NAMES}
+
+# Short labels used in chart legends. Profile names only, no internal cluster IDs.
+CLUSTER_SHORT = {c: CLUSTER_NAMES[c] for c in CLUSTER_NAMES}
 
 # Sidebar
 with st.sidebar:
-    st.markdown("### 👨‍💻 About the Project")
+    st.markdown("### ⚽ About the Project")
+    st.markdown(
+        "This dashboard turns Serie A defensive data into **four tactical profiles**, "
+        "so you can find player clones, compare profiles, and read team defensive identities at a glance."
+    )
+
+    st.markdown("**Under the hood:**")
     st.markdown("""
-    This application is the front-end interface of a comprehensive **Data Science pipeline** designed for football scouting.
-    
-    **Under the hood:**
-    * **Data Source:** Raw defensive metrics powered by **Opta Analyst / Stats Perform**.
-    * **Dataset Scope:** Serie A Center-Backs (Current Season: March 2026) with >800 minutes played.
-    * **Data Standardization:** Possession-Adjusted (PAdj) metrics.
-    * **Dimensionality Reduction:** Principal Component Analysis (PCA).
-    * **Machine Learning:** K-Means Clustering for tactical profiling.
-    * **Similarity Engine:** Euclidean Distance scoring.
+    * **Data Source:** Opta / Stats Perform, accessed via [TheAnalyst](https://theanalyst.com/competition/serie-a/stats).
+    * **Dataset Scope:** Serie A Centre-Backs, end of 2025/26 season, with >1000 minutes played (77 players).
+    * **Possession-Adjusted (PAdj) metrics:** raw stats are scaled as if every team had 50% possession, so a CB from Inter and one from Lecce can be compared fairly.
+    * **Dimensionality reduction:** PCA compresses the 9 defensive metrics into a 4-dim tactical space.
+    * **Clustering:** K-Means with centroids initialized from a Ward dendrogram cut at K=4.
+    * **Similarity engine:** min-max normalized Euclidean distance in PCA space.
     """)
+
+    st.markdown("📓 **See the full analysis:** [Notebook](https://github.com/matteovezzoli/SerieA-DefensiveScouting-Engine/blob/main/Clustering_defenders_SerieA.ipynb) · [HTML preview](https://github.com/matteovezzoli/SerieA-DefensiveScouting-Engine/blob/main/Clustering_defenders_SerieA.html)")
+
     st.write("---")
-    
+
     st.markdown("### 👨‍💼 Author")
     st.markdown("**Matteo Vezzoli**")
-    st.markdown("*Data Scientist | Sports Analytics*") 
-    
+    st.markdown("*Data Scientist*")
+
     st.markdown("""
     [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/matteo-vezzoli83)
     [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/matteovezzoli/SerieA-DefensiveScouting-Engine)
@@ -60,12 +91,14 @@ with st.sidebar:
 st.title("⚽ Serie A Defensive Scouting Engine")
 st.markdown("Explore the tactical DNA of defenders and discover the ideal profiles for your tactical system.")
 
-# TABS 
+# TABS
+# Order: Clone Finder (1-to-1) -> Player DNA (1-to-many) -> Metric Explorer (all-on-2-axes panorama)
+# -> Market Explorer (segment deep-dive) -> Team DNA (aggregated)
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🔍 Clone Finder", 
-    "🧬 Player DNA", 
-    "🌍 Market Explorer", 
-    "📊 Metric Explorer", 
+    "🔍 Clone Finder",
+    "🧬 Player DNA",
+    "📊 Metric Explorer",
+    "🌍 Market Explorer",
     "🛡️ Team DNA"
 ])
 
@@ -79,10 +112,18 @@ with tab1:
     col1, col2 = st.columns([1, 2])
     
     with col1:
-        target_player = st.selectbox("Select Target Player:", player_list, 
+        target_player = st.selectbox("Select Target Player:", player_list,
                                      index=player_list.index("Alessandro Bastoni") if "Alessandro Bastoni" in player_list else 0)
+
+        # Quick context card under the target selectbox: profile + team + minutes
+        target_row = df[df['name'] == target_player].iloc[0]
+        target_profile = CLUSTER_NAMES[int(target_row['Cluster'])]
+        target_team = target_row['team']
+        target_mins = int(target_row['mins'])
+        st.caption(f"**{target_profile}** · {target_team} · {target_mins}'")
+
         top_n = st.slider("How many clones?", 3, 10, 5)
-        
+
         target_idx = df[df['name'] == target_player].index[0]
         target_coords = df_pca.loc[target_idx, ['PC1', 'PC2', 'PC3', 'PC4']].values
         
@@ -96,10 +137,14 @@ with tab1:
         top_indices = [x[0] for x in distances[:top_n]]
         
         # Tactical Mapping & Similarity Score
-        cluster_map = {0: "Proactive", 1: "Box Protector", 2: "Tactical Ground", 3: "Recovery"}
+        # Similarity% uses min-max normalization on the full dataset's pairwise distance range.
+        # 100% = identical to the most similar pair in Serie A; 0% = as far apart as the most different pair.
         clones = df.loc[top_indices].copy()
-        clones['Cluster'] = clones['Cluster'].map(cluster_map)
-        clones['Similarity %'] = [round(np.exp(-0.15 * x[1]) * 100, 1) for x in distances[:top_n]]
+        clones['Cluster'] = clones['Cluster'].map(CLUSTER_NAMES)
+        clones['Similarity %'] = [
+            round((1 - (x[1] - DIST_MIN) / (DIST_MAX - DIST_MIN)) * 100, 1)
+            for x in distances[:top_n]
+        ]
 
         # Essential columns selection
         display_cols = {'name': 'Player', 'team': 'Team', 'Cluster': 'Profile', 'Similarity %': 'Similarity %'}
@@ -109,17 +154,27 @@ with tab1:
         st.dataframe(
             clones_final.style.background_gradient(cmap='RdYlGn', subset=['Similarity %'])
                               .format(precision=1, subset=['Similarity %']),
-            width='stretch'
+            hide_index=True,
+            column_config={
+                'Player': st.column_config.TextColumn(width='medium'),
+                'Team': st.column_config.TextColumn(width='medium'),
+                'Profile': st.column_config.TextColumn(width='medium'),
+                'Similarity %': st.column_config.NumberColumn(format='%.1f%%', width='small'),
+            }
         )
 
         
         with st.expander("💡 How is Similarity % calculated?"):
             st.markdown("""
-            The **Similarity %** is driven by an advanced mathematical model, not just a basic comparison of raw numbers:
-            
-            1. **Dimensionality Reduction:** We use **Principal Component Analysis (PCA)** to compress defensive metrics into a 4-dimensional "tactical space", capturing the true underlying DNA of a player.
-            2. **Spatial Distance:** We calculate the **Euclidean Distance** between the target player and all other defenders within this 4D space.
-            3. **Similarity Score:** We apply an exponential decay formula ($Similarity=e^{-0.15 \\cdot distance}\\cdot 100$) to convert this abstract mathematical distance into an intuitive 0-100% match score. 
+            The **Similarity %** is computed in three steps:
+
+            1. **Dimensionality reduction:** the 9 defensive metrics are compressed into a 4-dimensional tactical space via **Principal Component Analysis (PCA)**.
+            2. **Spatial distance:** the **Euclidean distance** between the target player and every other defender is measured in that space.
+            3. **Normalization:** the raw distance is rescaled to the 0-100% range using min-max normalization on the dataset's pairwise distances:
+
+            $$Similarity\\% = \\left(1 - \\frac{d - d_{min}}{d_{max} - d_{min}}\\right) \\times 100$$
+
+            This means **100% = the two most similar defenders in the league**, **0% = the two most different**, and everything else is in proportion. The score is meant for ranking comparisons within Serie A, not as an absolute match index across leagues.
             """)
 
     with col2:
@@ -129,19 +184,29 @@ with tab1:
         
         labels = [f.replace('_padj_z', '').replace('_z', '').title() for f in radar_features]
         fig_radar = go.Figure()
-        
+
+        # Compute dynamic range so outliers (e.g. Acerbi's clearances z-score) are not clipped.
+        target_vals = df[df['name'] == target_player][radar_features].values[0]
+        clone_vals = df[df['name'] == selected_clone][radar_features].values[0]
+        radial_min = min(target_vals.min(), clone_vals.min(), -3) - 0.3
+        radial_max = max(target_vals.max(), clone_vals.max(), 3) + 0.3
+
         # Target Trace & Selected Clone Trace
         for p, color in zip([target_player, selected_clone], ['crimson', 'dodgerblue']):
             val = df[df['name'] == p][radar_features].values[0].tolist()
             val += val[:1]
             fig_radar.add_trace(go.Scatterpolar(r=val, theta=labels + [labels[0]], fill='toself', name=p, line=dict(color=color)))
-        
+
         fig_radar.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[-3, 3])),
+            polar=dict(radialaxis=dict(visible=True, range=[radial_min, radial_max])),
             title=dict(text=f"{target_player} vs {selected_clone} ({selected_sim}%)", font=dict(size=18)),
             height=600
         )
         st.plotly_chart(fig_radar, width='stretch')
+        st.caption(
+            "Values are **z-scores**: 0 = Serie A average for centre-backs, +1 = one standard deviation above, "
+            "-1 = below. Anything above +1.5 is top-tier; below -1.5 is bottom-tier."
+        )
 
 # ==========================================
 # TAB 2: PLAYER DNA
@@ -150,27 +215,61 @@ with tab1:
 with tab2:
     st.header("Individual Profile Analysis")
     selected_player = st.selectbox("Select a player to view their DNA:", player_list, key='player_dna')
-    
+
     player_data = df[df['name'] == selected_player].iloc[0]
     player_cluster = int(player_data['Cluster'])
+
+    # Quick context line under the selectbox: team, minutes, appearances
+    st.caption(f"**{player_data['team']}** · {int(player_data['mins'])} minutes · {int(player_data['apps'])} appearances")
     
-    # Dictionary for tactical descriptions
+    # Tactical descriptions, keyed by profile name (stable across notebook reruns).
+    # Numbers refer to centroid deviations from the league average (PAdj metrics).
     cluster_definitions = {
-        0: {"name": "Proactive / Ground Defender", "desc": "Plays a proactive style. Steps up to engage opponents and win the ball back early rather than dropping deep. High volume in tackles and interceptions."},
-        1: {"name": "Positional / Box Protector", "desc": "Traditional center-back. Excels at absorbing pressure, holding the defensive line, clearing the ball, and dominating aerial duels."},
-        2: {"name": "Tactical / Ground-Focused", "desc": "Comfortable engaging opponents on the ground, often profiling as a wide center-back. Highly effective in ground duels but shows weakness in physical aerial battles."},
-        3: {"name": "Passive / Recovery Defender", "desc": "Relies on pace, positioning, and covering open space rather than direct physical duels. Low volume of actions, but focuses on spatial control."}
+        "Aggressor": {
+            "name": "Aggressor / Ball-Winner",
+            "desc": "League leaders in defensive volume: top tier in tackles (+27%), interceptions (+27%), possessions won (+38%) and ground duels engaged (+30%). Typical centre-back of dominant, high-line teams that defend forward and recover the ball in midfield areas."
+        },
+        "Aerial Stopper": {
+            "name": "Aerial Stopper",
+            "desc": "League leaders in clearances (+37%) and aerial win rate (~65%, +13%), with very high aerial volume (+26%) and above-average blocks (+21%) but reduced ground engagement (-12%). Classic stay-at-home centre-back of low/mid-block teams: holds the line, dominates the box, lets the ball come to them."
+        },
+        "Ground Specialist": {
+            "name": "Ground Specialist",
+            "desc": "Decent ground engagement (Ground Duels +10%) but a marked weakness in the air: very low aerial volume (-29%) and the lowest aerial win rate of the four profiles (~49%, -15%). Fits as a wide centre-back in a back three or as a technical defender in possession-based sides where the team prevents aerial duels from occurring."
+        },
+        "Coverage Defender": {
+            "name": "Coverage Defender",
+            "desc": "Below average across most defensive volume metrics: tackles -19%, possessions won -24%, ground duels engaged -20%, aerial duels engaged -12%. Often a fullback redeployed as a wide centre-back, or a defender in a deep block whose role prioritises shape and spatial cover over direct engagement. Low engagement is a tactical signature, not necessarily a weakness."
+        }
     }
-    
+
+    player_profile_name = CLUSTER_NAMES[player_cluster]
+
     # Profile Summary
-    st.metric(label="Primary Tactical Profile", value=f"C{player_cluster}: {cluster_definitions[player_cluster]['name']}")
-    st.info(f"**Tactic Focus:** {cluster_definitions[player_cluster]['desc']}")
+    st.metric(label="Primary Tactical Profile", value=cluster_definitions[player_profile_name]['name'])
+    st.info(f"**Tactic Focus:** {cluster_definitions[player_profile_name]['desc']}")
         
     # DNA Breakdown Chart
     st.write("---")
     perc_cols = ['Cluster_0_%', 'Cluster_1_%', 'Cluster_2_%', 'Cluster_3_%']
     vals = player_data[perc_cols].values
-    labels = ['C0: Proactive', 'C1: Positional', 'C2: Tactical', 'C3: Recovery']
+    labels = [CLUSTER_SHORT[i] for i in range(4)]
+
+    # Tactical identity classifier: how "pure" is this player's profile?
+    max_pct = float(player_data['Max_Percentage'])
+    if max_pct > 50:
+        identity_label, identity_color = "Tactical Specialist", "🟢"
+        identity_desc = "a clear, single-profile player"
+    elif max_pct >= 35:
+        identity_label, identity_color = "Tactical Hybrid", "🟡"
+        identity_desc = "blends two or more profiles"
+    else:
+        identity_label, identity_color = "Tactical Allrounder", "🟠"
+        identity_desc = "spread across multiple profiles, no dominant trait"
+    st.markdown(
+        f"{identity_color} **Tactical Identity: {identity_label}** "
+        f"(top match = {max_pct:.1f}% on {player_profile_name}) — *{identity_desc}*"
+    )
     
     # Create Bar Chart with embedded percentage labels
     fig_bar = go.Figure(go.Bar(
@@ -196,67 +295,134 @@ with tab2:
     )
     
     st.plotly_chart(fig_bar, width='stretch')
-    
+
+    # Most similar defenders (mini-table). Re-uses the same PCA + min-max similarity
+    # logic as the Clone Finder tab, but condensed to 3 rows for quick context.
+    st.markdown("#### 🔍 Most similar defenders in Serie A")
+    similar_idx = df[df['name'] == selected_player].index[0]
+    similar_coords = df_pca.loc[similar_idx, ['PC1', 'PC2', 'PC3', 'PC4']].values
+    similar_dists = []
+    for idx, row in df_pca.iterrows():
+        if idx == similar_idx:
+            continue
+        d = euclidean(similar_coords, row[['PC1', 'PC2', 'PC3', 'PC4']].values)
+        similar_dists.append((idx, d))
+    similar_dists.sort(key=lambda x: x[1])
+    top3 = similar_dists[:3]
+    top3_df = df.loc[[i for i, _ in top3], ['name', 'team']].copy()
+    top3_df['Profile'] = df.loc[[i for i, _ in top3], 'Cluster'].map(CLUSTER_NAMES).values
+    top3_df['Similarity %'] = [
+        round((1 - (d - DIST_MIN) / (DIST_MAX - DIST_MIN)) * 100, 1)
+        for _, d in top3
+    ]
+    top3_df = top3_df.rename(columns={'name': 'Player', 'team': 'Team'}).reset_index(drop=True)
+    st.dataframe(
+        top3_df.style.background_gradient(cmap='RdYlGn', subset=['Similarity %'])
+                     .format(precision=1, subset=['Similarity %']),
+        width='stretch',
+        hide_index=True
+    )
+
     # Methodology Expander
     with st.expander("📖 View Full Tactical Profile Definitions & Methodology"):
         st.markdown("""
         ### Cluster Interpretation: Defensive Profiles
-                    
-        **🔵 Cluster 0: High-Volume Ground Defenders**
-        * **Data Overview:** Well above the league average in Tackles (+33%), Interceptions (+32%), and Ground Duels (+35%). Lower numbers in blocks and clearances.
-        * **Tactical Profile:** A proactive style. Instead of dropping deep, these defenders step up to engage opponents and win the ball back early in the defensive or middle third.
+        *Percentages below indicate deviation from the league average (computed on PAdj metrics).*
 
-        **🔴 Cluster 1: Penalty Box Defenders**
-        * **Data Overview:** Leads the league in Clearances (+25%) and Blocks (+19%) with a very high aerial win rate (approx. 64%). Significantly lower tackling volume (-24%).
-        * **Tactical Profile:** Traditional, positional center-backs. They excel at absorbing pressure, holding the defensive line, and clearing the ball from the penalty area.
+        **🔵 Aggressor / Ball-Winner**
+        * **Data Signature:** Tackles +27%, Interceptions +27%, Possessions Won +38%, Ground Duels engaged +30%, Aerial Duels engaged +22%. The highest defensive volume profile in the league.
+        * **Tactical Profile:** Centre-backs of dominant, high-line teams. They step up rather than drop, win the ball back in midfield areas, and engage aggressively across the pitch. Typical of Roma, Inter, Napoli, Atalanta.
 
-        **🟢 Cluster 2: Ground-Focused Defenders**
-        * **Data Overview:** Solid numbers in ground actions (Tackles +15%, Blocks +26%), but show a clear weakness in the air, with a significant drop in aerial volume (-10%) and win rate (-15.5%).
-        * **Tactical Profile:** Comfortable engaging opponents on the ground, often profiling as wide center-backs in a three-man defense. They prioritize agility and ground duels over physical aerial battles.
+        **🔴 Aerial Stopper**
+        * **Data Signature:** Clearances +37%, Aerial Duels engaged +26%, Aerial win rate ~65% (+13%), Blocks +21%. Ground engagement is lower than the league average (Tackles -3%, Ground Duels -12%).
+        * **Tactical Profile:** Classic stay-at-home centre-back. Holds the defensive line, absorbs pressure, dominates the box aerially. Common in low/mid-block sides (Verona, Lecce, Torino, Genoa, Como).
 
-        **🟠 Cluster 3: Low-Volume Recovery Defenders**
-        * **Data Overview:** Sits below the league average in almost all volume metrics (Blocks -32%, Aerial Duels -32%, Clearances -24%).
-        * **Tactical Profile:** Low volume does not mean poor defending. These players rely on pace, positioning, and the ability to cover open space or track runners rather than engaging in direct physical duels.
+        **🟢 Ground Specialist**
+        * **Data Signature:** Decent ground volume (Ground Duels +10%, Tackles +3%) but a clear aerial weakness: Aerial Duels engaged -29% and the lowest Aerial win rate of the four profiles (~49%, -15%). Clearances are also low (-28%).
+        * **Tactical Profile:** Defenders who thrive in ground actions but are physically out-matched in the air. Often deployed as a wide centre-back in a back three or as a technical defender in possession-based teams that prevent aerial duels from happening (Cagliari, Milan, Sassuolo).
+
+        **🟠 Coverage Defender**
+        * **Data Signature:** Below league average across most volume metrics: Tackles -19%, Pos Won -24%, Ground Duels engaged -20%, Aerial Duels engaged -12%. Blocks slightly above average (+14%).
+        * **Tactical Profile:** Two overlapping sub-profiles emerge here: fullbacks redeployed as wide centre-backs, and defenders in deep blocks where the team funnels play away from them. Low engagement is a tactical signature, not necessarily a quality judgement. The data alone cannot distinguish "smart positioning" from "limited involvement", so the label is deliberately neutral.
         """)
 
 # ==========================================
-# TAB 3: MARKET EXPLORER
+# TAB 4: MARKET EXPLORER
 # ==========================================
-        
-with tab3:
+
+with tab4:
     st.header("Find Top Players by Tactical Profile")
     col_m1, col_m2, col_m3 = st.columns(3)
     
     with col_m1:
-        sel_cluster_name = st.selectbox("Filter by Profile:", ["Proactive (C0)", "Box Protector (C1)", "Tactical Ground (C2)", "Recovery (C3)"])
-        c_idx = int(sel_cluster_name[-2])
+        # Name -> integer ID lookup; the UI shows only the profile name.
+        _name_to_id = {name: cid for cid, name in CLUSTER_NAMES.items()}
+        profile_options = list(_name_to_id.keys())
+        sel_cluster_name = st.selectbox("Filter by Profile:", profile_options)
+        c_idx = _name_to_id[sel_cluster_name]
     with col_m2:
         sort_metric = st.radio("Rank by:", ["Tactical DNA %", "Minutes Played"])
     with col_m3:
         top_k = st.number_input("Show top:", 5, 20, 10)
 
+    # Summary statement: how big is this profile across the league?
+    total_in_profile = (df['Cluster'] == c_idx).sum()
+    teams_in_profile = df[df['Cluster'] == c_idx]['team'].nunique()
+    # Cap "top K" if K > how many are actually in the cluster
+    shown = min(top_k, total_in_profile)
+    profile_label = sel_cluster_name + "s" if total_in_profile != 1 else sel_cluster_name
+    teams_label = "team" if teams_in_profile == 1 else "teams"
+    st.markdown(
+        f"Showing top **{shown}** *{sel_cluster_name}* defenders in Serie A, "
+        f"ranked by {sort_metric.lower()}. "
+        f"The league has **{total_in_profile}** {profile_label} in total across **{teams_in_profile}** {teams_label}."
+    )
+
     # Filter and Sort Logic
     discovery_df = df[df['Cluster'] == c_idx].copy()
     sort_col = f'Cluster_{c_idx}_%' if sort_metric == "Tactical DNA %" else 'mins'
     discovery_df = discovery_df.sort_values(by=sort_col, ascending=False).head(top_k)
-    
-    discovery_df['Cluster Name'] = sel_cluster_name.split(" (")[0]
-    
-    final_discovery = discovery_df[['name', 'team', 'mins', f'Cluster_{c_idx}_%']].rename(columns={
-        'name': 'Player', 'team': 'Team', 'mins': 'Mins Played', f'Cluster_{c_idx}_%': 'DNA Match %'
-    })
-    
-    # Display table with green background gradient and fixed decimals
+
+    # Build the final table with per-90 PAdj stats so the scout sees the raw signal
+    # behind the profile, not just the DNA % aggregate.
+    padj_cols = {
+        'tackles_padj': 'Tackles',
+        'ints_padj': 'Ints',
+        'pos won_padj': 'Pos Won',
+        'blocks_padj': 'Blocks',
+        'clearances_padj': 'Clear.',
+        'Ground Duels -total_padj': 'GD Vol',
+        'Ground Duels %': 'GD %',
+        'Aerial Duels -total_padj': 'AD Vol',
+        'Aerial Duels %': 'AD %',
+    }
+    cols_to_show = ['name', 'team', 'mins', f'Cluster_{c_idx}_%'] + list(padj_cols.keys())
+    rename_map = {'name': 'Player', 'team': 'Team', 'mins': 'Mins',
+                  f'Cluster_{c_idx}_%': 'DNA %'}
+    rename_map.update(padj_cols)
+
+    final_discovery = discovery_df[cols_to_show].rename(columns=rename_map)
+
+    # Format: 1 decimal for floats, integer for Mins, gradient on DNA % for visual ranking
+    numeric_cols = ['DNA %'] + list(padj_cols.values())
+    format_map = {col: "{:.1f}" for col in numeric_cols}
+    format_map['Mins'] = "{:.0f}"
     st.dataframe(
-        final_discovery.style.background_gradient(cmap='YlGn', subset=['DNA Match %'])
-                             .format(precision=1, subset=['DNA Match %']),
-        width='stretch'
+        final_discovery.style
+            .background_gradient(cmap='YlGn', subset=['DNA %'])
+            .format(format_map),
+        width='stretch',
+        hide_index=True,
+    )
+    st.caption(
+        "Per-90 metrics are **possession-adjusted (PAdj)** so values are directly comparable across teams. "
+        "GD = Ground Duels, AD = Aerial Duels. DNA % indicates how strongly the player belongs to the selected profile."
     )
 # ==========================================
-# TAB 4: METRIC EXPLORER
+# TAB 3: METRIC EXPLORER
 # ==========================================
-    
-with tab4:
+
+with tab3:
     st.header("Interactive Metric Comparison")
     st.markdown("Analyze players across core defensive metrics. The scatter plot dynamically highlights tactical extremes.")
     
@@ -270,7 +436,7 @@ with tab4:
         ### The 9 Core Metrics Explained
         * **Tackles (PAdj):** Volume of ground challenges made to dispossess an opponent.
         * **Interceptions (PAdj):** Reading the game to cut out passing lanes and intercept the ball.
-        * **Possession Won (PAdj):** Times a player successfully won back possession for their team.
+        * **Possession Won (PAdj):** Ball recoveries credited to the player, regardless of how possession was regained (tackle, interception, opponent error, loose ball).
         * **Blocks (PAdj):** Standing in the way to physically block passes or shots.
         * **Clearances (PAdj):** Clearing the ball out of the defensive danger zone.
         * **Ground Duels - Total (PAdj):** Total volume of ground battles engaged.
@@ -329,9 +495,9 @@ with tab4:
     dynamic_highlights = top_right_3 + bottom_left_3
     # -----------------------------------------------------------------
     
-    cluster_names_map = {0: '0: Proactive', 1: '1: Positional', 2: '2: Tactical', 3: '3: Recovery'}
+    cluster_names_map = {i: CLUSTER_NAMES[i] for i in range(4)}
     df_plot['Tactical Profile'] = df_plot['Cluster'].map(cluster_names_map)
-    color_map = {'0: Proactive': 'dodgerblue', '1: Positional': 'crimson', '2: Tactical': 'mediumseagreen', '3: Recovery': 'darkorange'}
+    color_map = {cluster_names_map[i]: cluster_colors[i] for i in range(4)}
     
     fig_scatter = go.Figure()
 
@@ -377,23 +543,67 @@ with tab4:
     fig_scatter.add_hline(y=mean_y, line_dash="dash", line_color="gray", opacity=0.5)
     fig_scatter.add_vline(x=mean_x, line_dash="dash", line_color="gray", opacity=0.5)
     
-    # Clean layout configuration 
+    # Pearson correlation between the two selected metrics (same value as in the
+    # notebook's correlation matrix). Used both in the title and as a textual callout.
+    pearson_r = df[x_axis].corr(df[y_axis])
+    if abs(pearson_r) < 0.2:
+        corr_strength = "very weak"
+    elif abs(pearson_r) < 0.4:
+        corr_strength = "weak"
+    elif abs(pearson_r) < 0.6:
+        corr_strength = "moderate"
+    elif abs(pearson_r) < 0.8:
+        corr_strength = "strong"
+    else:
+        corr_strength = "very strong"
+    corr_direction = "positive" if pearson_r >= 0 else "negative"
+
+    # Clean layout configuration
     fig_scatter.update_layout(
-        title=dict(text=f"<b>{y_label} vs {x_label}</b><br><span style='font-size:12px'>Top 3 extremes (Top-Right & Bottom-Left) highlighted </span>", font=dict(size=20)),
-        height=800, 
+        title=dict(
+            text=(
+                f"<b>{y_label} vs {x_label}</b>"
+                f"<br><span style='font-size:13px'>Pearson r = {pearson_r:+.2f} "
+                f"({corr_strength} {corr_direction} correlation)</span>"
+            ),
+            font=dict(size=20)
+        ),
+        height=800,
         xaxis_title=x_label,
         yaxis_title=y_label,
         legend=dict(
-            title="Tactical Profiles", orientation="v", yanchor="top", y=0.98, xanchor="left", x=0.02, 
-            bgcolor="rgba(0, 0, 0, 0)",                
-            bordercolor="rgba(128, 128, 128, 0.4)",    
+            title="Tactical Profiles", orientation="v", yanchor="top", y=0.98, xanchor="left", x=0.02,
+            bgcolor="rgba(0, 0, 0, 0)",
+            bordercolor="rgba(128, 128, 128, 0.4)",
             borderwidth=1
         ),
-        margin=dict(l=40, r=40, t=80, b=40)
-        
+        margin=dict(l=40, r=40, t=90, b=40)
     )
-    
-    st.plotly_chart(fig_scatter, use_container_width=True)
+
+    st.plotly_chart(fig_scatter, width='stretch')
+
+    # Top / Bottom performers callout
+    col_top, col_bot = st.columns(2)
+    with col_top:
+        if top_right_3:
+            st.markdown(
+                f"**🟢 Top performers** (high {x_label} **and** high {y_label}): "
+                + ", ".join(f"**{p}**" for p in top_right_3)
+            )
+        else:
+            st.markdown(f"**🟢 Top performers**: no player above the mean on both axes.")
+    with col_bot:
+        if bottom_left_3:
+            st.markdown(
+                f"**🔴 Bottom performers** (low {x_label} **and** low {y_label}): "
+                + ", ".join(f"**{p}**" for p in bottom_left_3)
+            )
+        else:
+            st.markdown(f"**🔴 Bottom performers**: no player below the mean on both axes.")
+    st.caption(
+        "Highlighted players are the most extreme cases in each diagonal quadrant, "
+        "measured by normalized Euclidean distance from the league means on the two selected metrics."
+    )
 # ==========================================
 # TAB 5: TEAM DNA
 # ==========================================
@@ -402,31 +612,35 @@ with tab5:
     st.markdown("Analyze how different teams build their defensive lines based on minutes played by each tactical profile.")
     
     
-    cluster_names_map = {
-        0: 'Proactive',
-        1: 'Box Protector',
-        2: 'Tactical Ground',
-        3: 'Recovery'
-    }
+    cluster_names_map = CLUSTER_NAMES
 
-    # GLOBAL LEAGUE OVERVIEW 
+    # GLOBAL LEAGUE OVERVIEW
     with st.expander("🌍 View League-Wide Comparison (All Teams)", expanded=False):
-        team_cluster_mins = df.groupby(['team', 'Cluster'])['mins'].sum().unstack(fill_value=0)
-        team_dna_pct = team_cluster_mins.div(team_cluster_mins.sum(axis=1), axis=0) * 100
-        team_dna_pct = team_dna_pct.sort_values(by=0, ascending=True).round(1)
-        
+        # Aggregate minutes per (team, profile name) so the ordering is profile-name-driven
+        # rather than dependent on the arbitrary integer cluster ID.
+        team_profile_mins = df.groupby(['team', 'Cluster_Name'])['mins'].sum().unstack(fill_value=0)
+        team_dna_pct = team_profile_mins.div(team_profile_mins.sum(axis=1), axis=0) * 100
+
+        # Canonical profile order, left to right inside the stacked bar.
+        profile_order = ['Aggressor', 'Aerial Stopper', 'Ground Specialist', 'Coverage Defender']
+        profile_order_present = [p for p in profile_order if p in team_dna_pct.columns]
+        team_dna_pct = team_dna_pct.reindex(columns=profile_order_present, fill_value=0).round(1)
+
+        # Sort teams by Aggressor share descending, so the most proactive teams sit at the top.
+        # Plotly draws horizontal bars bottom-up, so the actual sort is ascending here.
+        sort_key = 'Aggressor' if 'Aggressor' in team_dna_pct.columns else profile_order_present[0]
+        team_dna_pct = team_dna_pct.sort_values(by=sort_key, ascending=True)
+
         fig_team = go.Figure()
-        
-        for i in range(4):
-            if i in team_dna_pct.columns:
-                fig_team.add_trace(go.Bar(
-                    y=team_dna_pct.index, 
-                    x=team_dna_pct[i], 
-                    name=f'C{i}: {cluster_names_map[i]}',
-                    orientation='h', 
-                    marker=dict(color=cluster_colors[i], line=dict(color='white', width=1))
-                ))
-                
+        for profile in profile_order_present:
+            fig_team.add_trace(go.Bar(
+                y=team_dna_pct.index,
+                x=team_dna_pct[profile],
+                name=profile,
+                orientation='h',
+                marker=dict(color=PROFILE_COLORS[profile], line=dict(color='white', width=1))
+            ))
+
         fig_team.update_layout(
             barmode='stack', title="Serie A Teams Defensive DNA",
             xaxis_title="Percentage of Total Defensive Minutes (%)",
