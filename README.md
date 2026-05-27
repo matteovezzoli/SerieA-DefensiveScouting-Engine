@@ -90,21 +90,15 @@ On the **67 players in common**, **63% kept the same cluster**. Two findings wor
 
 ---
 
-## ⚠️ Limitations & Future Work
+## ⚠️ Limitations
 
-**Limitations** of this iteration:
+Honest caveats on what this engine does **not** capture:
 
 * **Sample size.** 77 players across 4 clusters (~19 each). Clusters are interpretable but boundary cases can shift with marginally different input data (see the [stability check](#-stability-check-march-vs-end-of-season) above).
 * **Defensive scope only.** Build-up and on-ball metrics (progressive passes, carries, pass completion under pressure) are deliberately out of scope. A modern centre-back like Bastoni is not fully described by defensive volume alone.
 * **Volume vs. quality.** PAdj corrects for possession but cannot fully separate *"low engagement because the team funnels play away"* from *"low engagement because the defender is not involved enough"*. The Coverage Defender label is intentionally neutral for this reason.
 * **No temporal dynamics.** Stats are season-cumulative — a defender who changed role mid-season is averaged across both roles.
 * **Similarity % is a ranking score, not an absolute one.** It is min-max normalized on the *Serie A* pairwise distance range, so values are meaningful within this dataset but not directly transferable across leagues.
-
-**Future work** — natural next iterations:
-
-1. **Multi-league expansion** to top-5 leagues, growing the sample and stabilising boundaries.
-2. **Add a build-up dimension** alongside the defensive one, producing a 2-axis profile instead of a single label.
-3. **Per-match data** instead of season cumulative, to detect role changes and form trends.
 
 ---
 
