@@ -7803,13 +7803,6 @@ a.anchor-link {
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h1 id="Data-Driven-Football-Scouting:-Clustering-Serie-A-Center-Backs-(25/26)">Data-Driven Football Scouting: Clustering Serie A Center-Backs (25/26)<a class="anchor-link" href="#Data-Driven-Football-Scouting:-Clustering-Serie-A-Center-Backs-(25/26)">¶</a></h1><p>Analysis run on the full-season dataset (May 2026).</p>
-<p><strong>Setup:</strong></p>
-<ul>
-<li>Input sheet <code>CD_NEW</code> (77 players, mins ≥ 1000)</li>
-<li><code>team_possession_map</code> based on full-season possession averages</li>
-<li>Added: <code>random_state=42</code> everywhere, silhouette + Davies-Bouldin scores for K=3,4,5, <strong>auto-naming</strong> of clusters from centroid z-score signatures</li>
-<li>Outputs the CSVs / JSON consumed by the Streamlit dashboard</li>
-</ul>
 </div>
 </div>
 </div>
@@ -7820,51 +7813,48 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="%F0%9F%93%8B-Methodology-Summary">📋 Methodology Summary<a class="anchor-link" href="#%F0%9F%93%8B-Methodology-Summary">¶</a></h2><blockquote>
-<p><strong>TL;DR.</strong> What this notebook does, in 60 seconds.</p>
-</blockquote>
-<p><strong>Problem.</strong> Group Serie A centre-backs into football-meaningful tactical profiles using only defensive event data, without leaking team-style bias.</p>
-<p><strong>Pipeline.</strong></p>
+<h2 id="%F0%9F%93%8B-Methodology-Summary">📋 Methodology Summary<a class="anchor-link" href="#%F0%9F%93%8B-Methodology-Summary">¶</a></h2><p><strong>Problem:</strong> Group Serie A centre-backs into football-meaningful tactical profiles using only defensive event data, without leaking team-style bias.</p>
+<p><strong>Pipeline:</strong></p>
 <ol>
-<li><p><strong>Data.</strong> 77 centre-backs with ≥1000 minutes played in Serie A 25/26. Source: Opta / Stats Perform via TheAnalyst. 9 defensive metrics per player (tackles, interceptions, possessions won, blocks, clearances, ground/aerial duels with totals and win %).</p>
+<li><p><strong>Data:</strong> 77 centre-backs with ≥1000 minutes played in Serie A 25/26. Source: Opta / Stats Perform via TheAnalyst. 9 defensive metrics per player (tackles, interceptions, possessions won, blocks, clearances, ground/aerial duels with totals and win %).</p>
 </li>
-<li><p><strong>Possession Adjustment (PAdj).</strong> Raw defensive volumes are scaled as if every team had 50% possession (<code>x_padj = x · 50 / (100 - team_poss)</code>). Removes the systematic bias by which low-block teams accumulate more defensive actions per match purely from defending more.</p>
+<li><p><strong>Possession Adjustment (PAdj):</strong> Raw defensive volumes are scaled as if every team had 50% possession (<code>x_padj = x · 50 / (100 - team_poss)</code>). Removes the systematic bias by which low-block teams accumulate more defensive actions per match purely from defending more.</p>
 </li>
-<li><p><strong>Standardization.</strong> Z-score scaling on the 9 features (volume PAdj + raw percentages). Mandatory for both PCA and K-Means, which are scale-sensitive.</p>
+<li><p><strong>Standardization:</strong> Z-score scaling on the 9 features (volume PAdj + raw percentages). Mandatory for both PCA and K-Means, which are scale-sensitive.</p>
 </li>
-<li><p><strong>Dimensionality reduction.</strong> PCA from 9 → 4 components. Reduces noise, decorrelates features, mitigates the curse of dimensionality with 77 points.</p>
+<li><p><strong>Dimensionality reduction:</strong> PCA from 9 → 4 components. Reduces noise, decorrelates features, mitigates the curse of dimensionality with 77 points.</p>
 </li>
-<li><p><strong>Hierarchical clustering (Ward's method).</strong> Deterministic clustering used <strong>only to derive sensible initial centroids</strong>. Cut at distance t=10 produces 4 macro-groups visible in the dendrogram (large vertical gap between heights 10 and 16).</p>
+<li><p><strong>Hierarchical clustering (Ward's method):</strong> Deterministic clustering used <strong>only to derive sensible initial centroids</strong>. Cut at distance t=10 produces 4 macro-groups visible in the dendrogram (large vertical gap between heights 10 and 16).</p>
 </li>
-<li><p><strong>K-Means (K=4).</strong> Initialized from the hierarchical centroids (not random / not k-means++). Refines the assignment by minimizing within-cluster Euclidean distance.</p>
+<li><p><strong>K-Means (K=4):</strong> Initialized from the hierarchical centroids (not random / not k-means++). Refines the assignment by minimizing within-cluster Euclidean distance.</p>
 </li>
-<li><p><strong>Validation.</strong> Silhouette and Davies-Bouldin scores computed for K=3, 4, 5 (cell below). K=4 chosen as best trade-off between separation and tactical granularity.</p>
+<li><p><strong>Validation:</strong> Silhouette and Davies-Bouldin scores computed for K=3, 4, 5 (cell below). K=4 chosen as best trade-off between separation and tactical granularity.</p>
 </li>
-<li><p><strong>Soft clustering.</strong> Membership % for each player to each of the 4 centroids (inverse Euclidean distance, normalized). Captures the reality that real defenders are mixtures of archetypes, not pure types.</p>
+<li><p><strong>Soft clustering:</strong> Membership % for each player to each of the 4 centroids (inverse Euclidean distance, normalized). Captures the reality that real defenders are mixtures of archetypes, not pure types.</p>
 </li>
-<li><p><strong>Local Outlier Factor (LOF).</strong> Identifies players who are statistical anomalies within their assigned cluster, useful for spotting unique tactical profiles that the hard clustering loses.</p>
+<li><p><strong>Local Outlier Factor (LOF):</strong> Identifies players who are statistical anomalies within their assigned cluster, useful for spotting unique tactical profiles that the hard clustering loses.</p>
 </li>
 </ol>
-<p><strong>Auto-naming.</strong> Cluster IDs from K-Means are arbitrary and can permute across runs. To make outputs stable, a function inspects the centroid z-scores and assigns one of four canonical football profiles based on the dominant signature:</p>
+<p><strong>Auto-naming:</strong> Cluster IDs from K-Means are arbitrary and can permute across runs. To make outputs stable, a function inspects the centroid z-scores and assigns one of four canonical football profiles based on the dominant signature:</p>
 <ul>
 <li><strong>Aggressor</strong>: highest combined tackles + interceptions + possessions won + ground duels engaged</li>
 <li><strong>Aerial Stopper</strong>: highest clearances + aerial duel % + blocks</li>
 <li><strong>Ground Specialist</strong>: lowest aerial win % combined with low aerial volume</li>
 <li><strong>Coverage Defender</strong>: lowest overall defensive volume</li>
 </ul>
-<p><strong>Outputs.</strong></p>
+<p><strong>Outputs:</strong></p>
 <ul>
 <li><code>processed_defenders_data.csv</code>: full dataset with cluster assignments and membership %</li>
 <li><code>pca_coordinates.csv</code>: 4-dim PCA projection (used by the app's similarity engine)</li>
 <li><code>radar_metrics.json</code>: list of z-score features for the radar charts</li>
 <li><code>cluster_name_map.json</code>: mapping of cluster integer ID → canonical profile name</li>
 </ul>
-<p><strong>Reproducibility.</strong> <code>random_state=42</code> on PCA, KMeans, silhouette_score, and <code>np.random.seed(42)</code> at the top. Same input → identical output across runs.</p>
-<p><strong>Known limitations.</strong></p>
+<p><strong>Reproducibility:</strong> <code>random_state=42</code> on PCA, KMeans, silhouette_score, and <code>np.random.seed(42)</code> at the top. Same input → identical output across runs.</p>
+<p><strong>Known limitations:</strong></p>
 <ul>
 <li>Sample size (n=77) is small for PCA × K-Means; cluster boundaries are stable but not bulletproof.</li>
 <li>Defensive scope only, no build-up or on-ball metrics. A complete modern centre-back evaluation would need to add a parallel "possession" dimension.</li>
-<li>Silhouette = 0.20 is modest in absolute terms. This is expected on real tactical data (vs. textbook datasets like iris); the dendrogram and visual cluster separation are more reassuring than the silhouette alone.</li>
+<li>Silhouette = 0.20 is modest in absolute terms. This is expected on real tactical data, the dendrogram and visual cluster separation are more reassuring than the silhouette alone.</li>
 <li>The PAdj formula assumes that defensive actions scale linearly with opponent possession. This is the standard simplification used in scouting analytics but is not exact.</li>
 </ul>
 <hr/>
@@ -8258,9 +8248,9 @@ dtype: object
 <span class="c1"># Sanity: any teams in the data without a mapped value?</span>
 <span class="n">unmapped</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">'team'</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">team_possession_map</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
 <span class="k">if</span> <span class="n">unmapped</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"⚠️  Unmapped teams: </span><span class="si">{</span><span class="n">unmapped</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">" Unmapped teams: </span><span class="si">{</span><span class="n">unmapped</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"✅ All teams mapped."</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">" All teams mapped."</span><span class="p">)</span>
 
 <span class="n">df</span><span class="p">[</span><span class="s1">'team_poss'</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">'team'</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">team_possession_map</span><span class="p">)</span>
 
@@ -8285,7 +8275,7 @@ dtype: object
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>✅ All teams mapped.
+<pre> All teams mapped.
 
 New PAdj columns:
 ['tackles_padj', 'ints_padj', 'pos won_padj', 'blocks_padj', 'clearances_padj', 'Ground Duels -total_padj', 'Aerial Duels -total_padj']
@@ -8791,7 +8781,7 @@ Aerial Duels % &amp; Aerial Duels -total_padj: 0.477
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Reading the correlation matrix.</strong> The strongest correlation is <strong>Tackles ↔ Ground Duels Total = 0.80</strong>: not surprising, since a tackle is by definition a (won) ground duel. This is also why we keep both metrics in the analysis: the volume captures intent, the tackle captures success.</p>
+<p>The strongest correlation is <strong>Tackles ↔ Ground Duels Total = 0.80</strong>: not surprising, since a tackle is by definition a (won) ground duel. This is also why we keep both metrics in the analysis: the volume captures intent, the tackle captures success.</p>
 <p>The other notable positive pairs:</p>
 <ul>
 <li><strong>Clearances ↔ Blocks (0.57)</strong> and <strong>Clearances ↔ Aerial Duels Total (0.51)</strong>: all three are last-line box actions, they co-occur for defenders in deep blocks.</li>
@@ -8884,7 +8874,7 @@ Aerial Duels % &amp; Aerial Duels -total_padj: 0.477
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Reading the chart.</strong> The two metrics correlate strongly (the cloud stretches from bottom-left to top-right), which makes sense: a defender who engages in many ground duels usually tackles a lot too. The interesting players are the ones who break the diagonal.</p>
+<p>The two metrics correlate strongly (the cloud stretches from bottom-left to top-right), which makes sense: a defender who engages in many ground duels usually tackles a lot too. The interesting players are the ones who break the diagonal.</p>
 <p>The <strong>top-right corner</strong> is dominated by Atalanta and high-press teams (Scalvini, Ahanor, Hien, Bastoni, Vitík, Juan Jesus): high volume of both engagement and tackles, the textbook proactive ball-winners.</p>
 <p>The <strong>bottom-left</strong> is where the deep-block defenders sit (Romagnoli, Bianchetti, Jay Idzes, Provstgaard, Kabasele): low engagement, low tackles, they let the play come to them or get funneled away.</p>
 <p>A few players deserve attention because they are off-diagonal: Vitík and Juan Jesus stand out for tackling well above their ground duel volume (efficient tacklers), while Buongiorno and Hermoso engage in many ground duels relative to their tackle output.</p>
@@ -8956,7 +8946,7 @@ Aerial Duels % &amp; Aerial Duels -total_padj: 0.477
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Reading the chart.</strong> Tackles and interceptions are both ball-recovery actions, but they reflect a different reading of the game: an interceptor anticipates the pass, a tackler engages the carrier. The correlation here is weaker than in the previous chart, which means the two actions are more independent than one might think.</p>
+<p>Tackles and interceptions are both ball-recovery actions, but they reflect a different reading of the game: an interceptor anticipates the pass, a tackler engages the carrier. The correlation here is weaker than in the previous chart, which means the two actions are more independent than one might think.</p>
 <p><strong>Scalvini sits alone in the top-right</strong>: highest tackles AND highest interceptions in the dataset, the most proactive defender of Serie A 25/26 by this metric.</p>
 <p>The <strong>top-left</strong> quadrant (high interceptions, low tackles) captures the readers: Evan Ndicka, Acerbi, Bella-Kotchap. These are defenders who don't engage physically much but cut passing lanes effectively.</p>
 <p>The <strong>bottom-right</strong> (high tackles, low interceptions) is occupied by Vitík and Lloyd Kelly: they win the ball through direct engagement rather than anticipation.</p>
@@ -9029,7 +9019,7 @@ Aerial Duels % &amp; Aerial Duels -total_padj: 0.477
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Reading the chart.</strong> Clearances and blocks are both last-line defensive actions, and the correlation is positive but moderate. They cluster together for defenders in deep blocks who face lots of crosses and shots.</p>
+<p>Clearances and blocks are both last-line defensive actions, and the correlation is positive but moderate. They cluster together for defenders in deep blocks who face lots of crosses and shots.</p>
 <p><strong>Acerbi sits at the extreme top-right</strong>, far from anyone else: highest blocks AND high clearances. He's the most pure "box protector" in Serie A by these metrics, which is consistent with his role as Inter's deep central defender.</p>
 <p>The <strong>top-right group</strong> (Baschirotto, Diego Carlos, Kempf, Maripán, Østigård) are all defenders of low/mid-block teams who absorb crosses for a living.</p>
 <p>The <strong>bottom-left corner</strong> captures the opposite tactical setup: Kalulu, Zappa, Walukiewicz, Bastoni. These are high-line defenders whose teams rarely let the ball reach the danger zone, so they accumulate few clearances and blocks.</p>
@@ -9102,7 +9092,7 @@ Aerial Duels % &amp; Aerial Duels -total_padj: 0.477
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Reading the chart.</strong> This view splits the dataset by the physical domain of engagement. The cloud has no clear diagonal: ground and aerial volumes are essentially independent, which means a CB can be heavy in one without the other.</p>
+<p>This view splits the dataset by the physical domain of engagement. The cloud has no clear diagonal: ground and aerial volumes are essentially independent, which means a CB can be heavy in one without the other.</p>
 <p>The <strong>top of the chart</strong> (high aerial volume) is dominated by tall, physical defenders: Jacobo Ramón, Kempf, Amir Rrahmani, Bremer, Acerbi. These are CBs who go up for every cross.</p>
 <p>The <strong>bottom-right</strong> corner (high ground, low aerial) hosts a non-trivial group: Ahanor, Scalvini, Bastoni, Mancini, Hermoso. They're high-volume defenders but don't dominate aerial battles, typical Atalanta and Roma profile, where the CB engages constantly on the ground but the team prevents aerial situations from happening near the box.</p>
 <p>The <strong>bottom-left</strong> is the low-engagement zone (Romagnoli, Carlos Augusto bordering it, Filippo Terracciano, Delprato): low volume everywhere, the natural home of the Coverage Defender cluster.</p>
@@ -9193,7 +9183,7 @@ PC9               1.43          100.00
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Reading the scree plot.</strong> PC1 alone captures 30.7% of the variance, and PC1+PC2 together get to <strong>55.6%</strong>: enough to make 2D visualizations like the biplot and the tactical territories map meaningful, but not so concentrated that PC3 and PC4 are noise.</p>
+<p>PC1 alone captures 30.7% of the variance, and PC1+PC2 together get to <strong>55.6%</strong>: enough to make 2D visualizations like the biplot and the tactical territories map meaningful, but not so concentrated that PC3 and PC4 are noise.</p>
 <p>With 4 components we cover <strong>78.5%</strong> of the variance, just short of the conventional 80% threshold. The choice of K=4 components is intentional even without crossing 80% exactly: PC5 would add only about 8% more, and keeping the dimensionality lower preserves a healthy ratio of observations to dimensions (77 players over 4 axes) for the downstream K-Means clustering. The variance left out by PC5 onwards is mostly noise on the percentage features, not tactical signal.</p>
 </div>
 </div>
@@ -9239,192 +9229,192 @@ PC9               1.43          100.00
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
-#T_a0d2c_row0_col0 {
+#T_647fc_row0_col0 {
   background-color: #cc403a;
   color: #f1f1f1;
 }
-#T_a0d2c_row0_col1 {
+#T_647fc_row0_col1 {
   background-color: #506bda;
   color: #f1f1f1;
 }
-#T_a0d2c_row0_col2 {
+#T_647fc_row0_col2 {
   background-color: #f2cab5;
   color: #000000;
 }
-#T_a0d2c_row0_col3 {
+#T_647fc_row0_col3 {
   background-color: #f39778;
   color: #000000;
 }
-#T_a0d2c_row1_col0 {
+#T_647fc_row1_col0 {
   background-color: #f5a081;
   color: #000000;
 }
-#T_a0d2c_row1_col1 {
+#T_647fc_row1_col1 {
   background-color: #dfdbd9;
   color: #000000;
 }
-#T_a0d2c_row1_col2 {
+#T_647fc_row1_col2 {
   background-color: #8badfd;
   color: #000000;
 }
-#T_a0d2c_row1_col3, #T_a0d2c_row5_col2 {
+#T_647fc_row1_col3, #T_647fc_row5_col2 {
   background-color: #afcafc;
   color: #000000;
 }
-#T_a0d2c_row2_col0 {
+#T_647fc_row2_col0 {
   background-color: #d95847;
   color: #f1f1f1;
 }
-#T_a0d2c_row2_col1, #T_a0d2c_row8_col0 {
+#T_647fc_row2_col1, #T_647fc_row8_col0 {
   background-color: #85a8fc;
   color: #f1f1f1;
 }
-#T_a0d2c_row2_col2, #T_a0d2c_row4_col0, #T_a0d2c_row5_col1, #T_a0d2c_row8_col3 {
+#T_647fc_row2_col2, #T_647fc_row4_col0, #T_647fc_row5_col1, #T_647fc_row8_col3 {
   background-color: #3b4cc0;
   color: #f1f1f1;
 }
-#T_a0d2c_row2_col3 {
+#T_647fc_row2_col3 {
   background-color: #a1c0ff;
   color: #000000;
 }
-#T_a0d2c_row3_col0 {
+#T_647fc_row3_col0 {
   background-color: #4257c9;
   color: #f1f1f1;
 }
-#T_a0d2c_row3_col1 {
+#T_647fc_row3_col1 {
   background-color: #c6d6f1;
   color: #000000;
 }
-#T_a0d2c_row3_col2 {
+#T_647fc_row3_col2 {
   background-color: #b5cdfa;
   color: #000000;
 }
-#T_a0d2c_row3_col3, #T_a0d2c_row5_col0, #T_a0d2c_row6_col2, #T_a0d2c_row7_col1 {
+#T_647fc_row3_col3, #T_647fc_row5_col0, #T_647fc_row6_col2, #T_647fc_row7_col1 {
   background-color: #b40426;
   color: #f1f1f1;
 }
-#T_a0d2c_row4_col1 {
+#T_647fc_row4_col1 {
   background-color: #ec8165;
   color: #f1f1f1;
 }
-#T_a0d2c_row4_col2 {
+#T_647fc_row4_col2 {
   background-color: #abc8fd;
   color: #000000;
 }
-#T_a0d2c_row4_col3 {
+#T_647fc_row4_col3 {
   background-color: #f7b396;
   color: #000000;
 }
-#T_a0d2c_row5_col3 {
+#T_647fc_row5_col3 {
   background-color: #f6a586;
   color: #000000;
 }
-#T_a0d2c_row6_col0 {
+#T_647fc_row6_col0 {
   background-color: #bcd2f7;
   color: #000000;
 }
-#T_a0d2c_row6_col1 {
+#T_647fc_row6_col1 {
   background-color: #5f7fe8;
   color: #f1f1f1;
 }
-#T_a0d2c_row6_col3 {
+#T_647fc_row6_col3 {
   background-color: #6788ee;
   color: #f1f1f1;
 }
-#T_a0d2c_row7_col0 {
+#T_647fc_row7_col0 {
   background-color: #ccd9ed;
   color: #000000;
 }
-#T_a0d2c_row7_col2 {
+#T_647fc_row7_col2 {
   background-color: #5d7ce6;
   color: #f1f1f1;
 }
-#T_a0d2c_row7_col3 {
+#T_647fc_row7_col3 {
   background-color: #d6dce4;
   color: #000000;
 }
-#T_a0d2c_row8_col1 {
+#T_647fc_row8_col1 {
   background-color: #e8765c;
   color: #f1f1f1;
 }
-#T_a0d2c_row8_col2 {
+#T_647fc_row8_col2 {
   background-color: #8fb1fe;
   color: #000000;
 }
 </style>
-<table id="T_a0d2c">
+<table id="T_647fc">
 <thead>
 <tr>
 <th class="blank level0"> </th>
-<th class="col_heading level0 col0" id="T_a0d2c_level0_col0">PC1</th>
-<th class="col_heading level0 col1" id="T_a0d2c_level0_col1">PC2</th>
-<th class="col_heading level0 col2" id="T_a0d2c_level0_col2">PC3</th>
-<th class="col_heading level0 col3" id="T_a0d2c_level0_col3">PC4</th>
+<th class="col_heading level0 col0" id="T_647fc_level0_col0">PC1</th>
+<th class="col_heading level0 col1" id="T_647fc_level0_col1">PC2</th>
+<th class="col_heading level0 col2" id="T_647fc_level0_col2">PC3</th>
+<th class="col_heading level0 col3" id="T_647fc_level0_col3">PC4</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<th class="row_heading level0 row0" id="T_a0d2c_level0_row0">Tackles</th>
-<td class="data row0 col0" id="T_a0d2c_row0_col0">0.468</td>
-<td class="data row0 col1" id="T_a0d2c_row0_col1">0.118</td>
-<td class="data row0 col2" id="T_a0d2c_row0_col2">0.368</td>
-<td class="data row0 col3" id="T_a0d2c_row0_col3">0.324</td>
+<th class="row_heading level0 row0" id="T_647fc_level0_row0">Tackles</th>
+<td class="data row0 col0" id="T_647fc_row0_col0">0.468</td>
+<td class="data row0 col1" id="T_647fc_row0_col1">0.118</td>
+<td class="data row0 col2" id="T_647fc_row0_col2">0.368</td>
+<td class="data row0 col3" id="T_647fc_row0_col3">0.324</td>
 </tr>
 <tr>
-<th class="row_heading level0 row1" id="T_a0d2c_level0_row1">Interceptions</th>
-<td class="data row1 col0" id="T_a0d2c_row1_col0">0.297</td>
-<td class="data row1 col1" id="T_a0d2c_row1_col1">0.323</td>
-<td class="data row1 col2" id="T_a0d2c_row1_col2">-0.054</td>
-<td class="data row1 col3" id="T_a0d2c_row1_col3">-0.118</td>
+<th class="row_heading level0 row1" id="T_647fc_level0_row1">Interceptions</th>
+<td class="data row1 col0" id="T_647fc_row1_col0">0.297</td>
+<td class="data row1 col1" id="T_647fc_row1_col1">0.323</td>
+<td class="data row1 col2" id="T_647fc_row1_col2">-0.054</td>
+<td class="data row1 col3" id="T_647fc_row1_col3">-0.118</td>
 </tr>
 <tr>
-<th class="row_heading level0 row2" id="T_a0d2c_level0_row2">Poss. Won</th>
-<td class="data row2 col0" id="T_a0d2c_row2_col0">0.432</td>
-<td class="data row2 col1" id="T_a0d2c_row2_col1">0.191</td>
-<td class="data row2 col2" id="T_a0d2c_row2_col2">-0.338</td>
-<td class="data row2 col3" id="T_a0d2c_row2_col3">-0.163</td>
+<th class="row_heading level0 row2" id="T_647fc_level0_row2">Poss. Won</th>
+<td class="data row2 col0" id="T_647fc_row2_col0">0.432</td>
+<td class="data row2 col1" id="T_647fc_row2_col1">0.191</td>
+<td class="data row2 col2" id="T_647fc_row2_col2">-0.338</td>
+<td class="data row2 col3" id="T_647fc_row2_col3">-0.163</td>
 </tr>
 <tr>
-<th class="row_heading level0 row3" id="T_a0d2c_level0_row3">Blocks</th>
-<td class="data row3 col0" id="T_a0d2c_row3_col0">-0.311</td>
-<td class="data row3 col1" id="T_a0d2c_row3_col1">0.280</td>
-<td class="data row3 col2" id="T_a0d2c_row3_col2">0.087</td>
-<td class="data row3 col3" id="T_a0d2c_row3_col3">0.590</td>
+<th class="row_heading level0 row3" id="T_647fc_level0_row3">Blocks</th>
+<td class="data row3 col0" id="T_647fc_row3_col0">-0.311</td>
+<td class="data row3 col1" id="T_647fc_row3_col1">0.280</td>
+<td class="data row3 col2" id="T_647fc_row3_col2">0.087</td>
+<td class="data row3 col3" id="T_647fc_row3_col3">0.590</td>
 </tr>
 <tr>
-<th class="row_heading level0 row4" id="T_a0d2c_level0_row4">Clearances</th>
-<td class="data row4 col0" id="T_a0d2c_row4_col0">-0.331</td>
-<td class="data row4 col1" id="T_a0d2c_row4_col1">0.462</td>
-<td class="data row4 col2" id="T_a0d2c_row4_col2">0.056</td>
-<td class="data row4 col3" id="T_a0d2c_row4_col3">0.245</td>
+<th class="row_heading level0 row4" id="T_647fc_level0_row4">Clearances</th>
+<td class="data row4 col0" id="T_647fc_row4_col0">-0.331</td>
+<td class="data row4 col1" id="T_647fc_row4_col1">0.462</td>
+<td class="data row4 col2" id="T_647fc_row4_col2">0.056</td>
+<td class="data row4 col3" id="T_647fc_row4_col3">0.245</td>
 </tr>
 <tr>
-<th class="row_heading level0 row5" id="T_a0d2c_level0_row5">Ground Duels (Vol)</th>
-<td class="data row5 col0" id="T_a0d2c_row5_col0">0.528</td>
-<td class="data row5 col1" id="T_a0d2c_row5_col1">0.085</td>
-<td class="data row5 col2" id="T_a0d2c_row5_col2">0.072</td>
-<td class="data row5 col3" id="T_a0d2c_row5_col3">0.285</td>
+<th class="row_heading level0 row5" id="T_647fc_level0_row5">Ground Duels (Vol)</th>
+<td class="data row5 col0" id="T_647fc_row5_col0">0.528</td>
+<td class="data row5 col1" id="T_647fc_row5_col1">0.085</td>
+<td class="data row5 col2" id="T_647fc_row5_col2">0.072</td>
+<td class="data row5 col3" id="T_647fc_row5_col3">0.285</td>
 </tr>
 <tr>
-<th class="row_heading level0 row6" id="T_a0d2c_level0_row6">Ground Duels (%)</th>
-<td class="data row6 col0" id="T_a0d2c_row6_col0">0.002</td>
-<td class="data row6 col1" id="T_a0d2c_row6_col1">0.140</td>
-<td class="data row6 col2" id="T_a0d2c_row6_col2">0.829</td>
-<td class="data row6 col3" id="T_a0d2c_row6_col3">-0.341</td>
+<th class="row_heading level0 row6" id="T_647fc_level0_row6">Ground Duels (%)</th>
+<td class="data row6 col0" id="T_647fc_row6_col0">0.002</td>
+<td class="data row6 col1" id="T_647fc_row6_col1">0.140</td>
+<td class="data row6 col2" id="T_647fc_row6_col2">0.829</td>
+<td class="data row6 col3" id="T_647fc_row6_col3">-0.341</td>
 </tr>
 <tr>
-<th class="row_heading level0 row7" id="T_a0d2c_level0_row7">Aerial Duels (Vol)</th>
-<td class="data row7 col0" id="T_a0d2c_row7_col0">0.046</td>
-<td class="data row7 col1" id="T_a0d2c_row7_col1">0.552</td>
-<td class="data row7 col2" id="T_a0d2c_row7_col2">-0.208</td>
-<td class="data row7 col3" id="T_a0d2c_row7_col3">0.019</td>
+<th class="row_heading level0 row7" id="T_647fc_level0_row7">Aerial Duels (Vol)</th>
+<td class="data row7 col0" id="T_647fc_row7_col0">0.046</td>
+<td class="data row7 col1" id="T_647fc_row7_col1">0.552</td>
+<td class="data row7 col2" id="T_647fc_row7_col2">-0.208</td>
+<td class="data row7 col3" id="T_647fc_row7_col3">0.019</td>
 </tr>
 <tr>
-<th class="row_heading level0 row8" id="T_a0d2c_level0_row8">Aerial Duels (%)</th>
-<td class="data row8 col0" id="T_a0d2c_row8_col0">-0.136</td>
-<td class="data row8 col1" id="T_a0d2c_row8_col1">0.471</td>
-<td class="data row8 col2" id="T_a0d2c_row8_col2">-0.040</td>
-<td class="data row8 col3" id="T_a0d2c_row8_col3">-0.498</td>
+<th class="row_heading level0 row8" id="T_647fc_level0_row8">Aerial Duels (%)</th>
+<td class="data row8 col0" id="T_647fc_row8_col0">-0.136</td>
+<td class="data row8 col1" id="T_647fc_row8_col1">0.471</td>
+<td class="data row8 col2" id="T_647fc_row8_col2">-0.040</td>
+<td class="data row8 col3" id="T_647fc_row8_col3">-0.498</td>
 </tr>
 </tbody>
 </table>
@@ -9516,7 +9506,7 @@ PC9               1.43          100.00
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Reading the biplot.</strong> Each arrow shows where a feature pushes players in the PC1-PC2 plane. Reading the angles between arrows tells us how the original metrics combine.</p>
+<p>Each arrow shows where a feature pushes players in the PC1-PC2 plane. Reading the angles between arrows tells us how the original metrics combine.</p>
 <p><strong>Tackles, Ground Duels Total, Pos Won and Interceptions</strong> all point in similar directions (right side of the chart): they co-vary, and together they define what PC1 reads as "defensive proactivity / engagement". Players on the right of the chart (Scalvini, Hien, Bastoni, Mancini) are the high-volume ball-winners.</p>
 <p><strong>Clearances, Blocks and Aerial Duels (Vol/%)</strong> form a separate group of arrows pointing to the upper-left quadrant: these are the box-protection metrics, and PC2 reads them as "aerial / box dominance". Players in the upper-left (Acerbi, Kempf, Østigård) are the classic Aerial Stoppers.</p>
 <p><strong>Aerial Duels (Vol)</strong> is the dominant contributor on PC2: it sits almost vertically, meaning it's the metric that most cleanly separates "high aerial" from "low aerial" defenders independently of their ground volume.</p>
@@ -9579,7 +9569,7 @@ PC9               1.43          100.00
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Reading the dendrogram.</strong> The key feature is the empty vertical band between heights ~10 and ~16, where no fusions happen. That gap is the visual evidence that 4 macro-groups sit at genuinely distinct positions in the data, and it justifies cutting at t=10 (dashed line) to get exactly four clusters.</p>
+<p>The key feature is the empty vertical band between heights ~10 and ~16, where no fusions happen. That gap is the visual evidence that 4 macro-groups sit at genuinely distinct positions in the data, and it justifies cutting at t=10 (dashed line) to get exactly four clusters.</p>
 <p>The top split at height 16 separates two macro-families: high-volume players on the left (the future Aggressors and Aerial Stoppers) vs low-volume players on the right (Ground Specialists and Coverage Defenders). At height ~10, each of these two families splits again into the four canonical profiles.</p>
 <p>If you cut lower, around height 5 to 6, the clusters fragment into 6 to 8 sub-groups that start losing tactical meaning: you would see sub-clusters like "Inter defenders" or "Atalanta defenders", which are team-level patterns, not tactical archetypes. K=4 is the level that keeps the football interpretation intact.</p>
 </div>
@@ -9706,7 +9696,7 @@ If K=4 isn't optimal here, reconsider before continuing.
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Reading the validation table.</strong> <strong>Silhouette</strong> measures how well-separated clusters are (ranging from -1 to 1; higher = better). <strong>Davies-Bouldin</strong> measures the ratio of within-cluster scatter to between-cluster distance (lower = better). K=3 has slightly higher silhouette than K=4, but the difference is small (&lt;10%) and K=4 captures a tactical granularity that football analysts recognize (the four canonical profiles below). Inertia naturally decreases with K, so we don't optimize for that alone.</p>
+<p><strong>Silhouette</strong> measures how well-separated clusters are (ranging from -1 to 1; higher = better). <strong>Davies-Bouldin</strong> measures the ratio of within-cluster scatter to between-cluster distance (lower = better). K=3 has slightly higher silhouette than K=4, but the difference is small (&lt;10%) and K=4 captures a tactical granularity that football analysts recognize (the four canonical profiles below). Inertia naturally decreases with K, so we don't optimize for that alone.</p>
 </div>
 </div>
 </div>
@@ -9792,7 +9782,7 @@ Name: count, dtype: int64
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Why this initialization matters.</strong> Default K-Means uses random or k-means++ initialization, which means <strong>different runs can produce different clusters</strong> on the same data. By feeding K-Means the centroids extracted from the Ward dendrogram, we get a deterministic, data-driven starting point. K-Means then refines the assignment by minimizing within-cluster distance, combining the <strong>stability of hierarchical clustering</strong> with the <strong>flexibility of K-Means</strong>.</p>
+<p>Default K-Means uses random or k-means++ initialization, which means <strong>different runs can produce different clusters</strong> on the same data. By feeding K-Means the centroids extracted from the Ward dendrogram, we get a deterministic, data-driven starting point. K-Means then refines the assignment by minimizing within-cluster distance, combining the <strong>stability of hierarchical clustering</strong> with the <strong>flexibility of K-Means</strong>.</p>
 </div>
 </div>
 </div>
@@ -9803,18 +9793,20 @@ Name: count, dtype: int64
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Auto-Naming-Clusters">Auto-Naming Clusters<a class="anchor-link" href="#Auto-Naming-Clusters">¶</a></h2><p>Instead of hand-labelling cluster numbers (which are arbitrary and can flip across runs), we <strong>assign names data-driven</strong> from the centroid z-scores. The four football-meaningful profiles are:</p>
+<h2 id="Auto-Naming-Clusters">Auto-Naming Clusters<a class="anchor-link" href="#Auto-Naming-Clusters">¶</a></h2><p>K-Means produces cluster IDs that are <strong>arbitrary integers</strong> (0, 1, 2, 3). The same data, run twice with the same algorithm, might output "cluster 2" instead of "cluster 0" for the same group of players — the numbers carry no meaning, only the grouping does. To keep the analysis (and the downstream Streamlit app) stable, we <strong>assign football-meaningful names automatically</strong>, based on what each cluster's <em>average player</em> looks like.</p>
+<p>For each cluster, we compute the <strong>centroid z-scores</strong> — the mean z-score of every metric across all players in that cluster. A centroid with <code>tackles_z = +0.9</code> means <em>"this cluster's average player is 0.9 standard deviations above the league on tackles"</em>. The four name-defining signatures we look for:</p>
 <ul>
-<li><strong>Aggressor / Ball-Winner</strong>: highest combined <code>tackles + ints + pos won + ground duels engaged</code></li>
-<li><strong>Aerial Stopper</strong>: highest <code>clearances + aerial duel % + blocks</code></li>
-<li><strong>Ground Specialist</strong>: lowest <code>aerial duel %</code> AND aerial volume below median (defining trait = aerial weakness compensated by ground work)</li>
-<li><strong>Coverage Defender</strong>: lowest overall volume (sum of all z-scores)</li>
+<li><strong>Aggressor / Ball-Winner</strong> → highest combined score on <code>tackles + interceptions + possessions won + ground duels engaged</code>. This captures pure defensive volume in midfield areas.</li>
+<li><strong>Aerial Stopper</strong> → highest combined score on <code>clearances + aerial duel % + blocks</code>. The box-defending signature.</li>
+<li><strong>Ground Specialist</strong> → most negative combined score on <code>aerial duel % + aerial duel volume</code>. The defining trait is <em>aerial weakness</em>: these defenders are characterised by what they avoid (aerial duels), not by what they dominate. The name reflects <em>where</em> they engage (on the ground, not in the air), not necessarily <em>how well</em> they engage there — the football meaning is that of a CB profile shaped by aerial limitations, typically deployed in systems built to neutralise aerial duels altogether.</li>
+<li><strong>Coverage Defender</strong> → most negative overall z-score sum (low across the board). The catch-all low-engagement profile.</li>
 </ul>
-<p>The function below inspects the K-Means centroids and assigns names accordingly. <strong>Robust to cluster number permutation.</strong></p>
+<p>Names are assigned <strong>greedily</strong>: first the cluster with the highest Aggressor score, then the highest Aerial Stopper score among the remaining clusters, and so on. The order is intentional — <em>Aggressor</em> and <em>Aerial Stopper</em> have the clearest, most discriminative signatures, so we lock those in first; <em>Ground Specialist</em> and <em>Coverage Defender</em> fall into place from what is left. On this dataset the assignment matches what a human scout would label by inspection, and we verified it against the Hungarian (globally optimal) assignment as a sanity check.</p>
+<p>Hand-labelling "cluster 0 = Aggressor" hard-codes a fragile assumption: re-run the pipeline tomorrow with one more player, and the integer labels can shuffle, breaking every chart downstream. The auto-naming function is <strong>robust to cluster-ID permutations</strong> — it always assigns the right name to the right group, no matter how K-Means happens to number them today.</p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=bce8a407">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3d2a428d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9897,144 +9889,144 @@ Centroid z-scores (for verification):
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
-#T_034ff_row0_col0 {
+#T_9fb5c_row0_col0 {
   background-color: #f9eee7;
   color: #000000;
 }
-#T_034ff_row0_col1, #T_034ff_row3_col7 {
+#T_9fb5c_row0_col1, #T_9fb5c_row3_col7 {
   background-color: #c7e0ed;
   color: #000000;
 }
-#T_034ff_row0_col2, #T_034ff_row1_col6 {
+#T_9fb5c_row0_col2, #T_9fb5c_row1_col6 {
   background-color: #faeae1;
   color: #000000;
 }
-#T_034ff_row0_col3 {
+#T_9fb5c_row0_col3 {
   background-color: #8dc2dc;
   color: #000000;
 }
-#T_034ff_row0_col4 {
+#T_9fb5c_row0_col4 {
   background-color: #2f79b5;
   color: #f1f1f1;
 }
-#T_034ff_row0_col5 {
+#T_9fb5c_row0_col5 {
   background-color: #fbd0b9;
   color: #000000;
 }
-#T_034ff_row0_col6 {
+#T_9fb5c_row0_col6 {
   background-color: #8ac0db;
   color: #000000;
 }
-#T_034ff_row0_col7 {
+#T_9fb5c_row0_col7 {
   background-color: #4997c5;
   color: #f1f1f1;
 }
-#T_034ff_row0_col8 {
+#T_9fb5c_row0_col8 {
   background-color: #2c75b4;
   color: #f1f1f1;
 }
-#T_034ff_row1_col0, #T_034ff_row2_col7 {
+#T_9fb5c_row1_col0, #T_9fb5c_row2_col7 {
   background-color: #e27b62;
   color: #f1f1f1;
 }
-#T_034ff_row1_col1 {
+#T_9fb5c_row1_col1 {
   background-color: #db6b55;
   color: #f1f1f1;
 }
-#T_034ff_row1_col2 {
+#T_9fb5c_row1_col2 {
   background-color: #b72230;
   color: #f1f1f1;
 }
-#T_034ff_row1_col3 {
+#T_9fb5c_row1_col3 {
   background-color: #a0cce2;
   color: #000000;
 }
-#T_034ff_row1_col4 {
+#T_9fb5c_row1_col4 {
   background-color: #c0dceb;
   color: #000000;
 }
-#T_034ff_row1_col5 {
+#T_9fb5c_row1_col5 {
   background-color: #c6413e;
   color: #f1f1f1;
 }
-#T_034ff_row1_col7 {
+#T_9fb5c_row1_col7 {
   background-color: #f09c7b;
   color: #000000;
 }
-#T_034ff_row1_col8, #T_034ff_row2_col6 {
+#T_9fb5c_row1_col8, #T_9fb5c_row2_col6 {
   background-color: #fcd3bc;
   color: #000000;
 }
-#T_034ff_row2_col0 {
+#T_9fb5c_row2_col0 {
   background-color: #ecf2f5;
   color: #000000;
 }
-#T_034ff_row2_col1, #T_034ff_row3_col3 {
+#T_9fb5c_row2_col1, #T_9fb5c_row3_col3 {
   background-color: #fac8af;
   color: #000000;
 }
-#T_034ff_row2_col2 {
+#T_9fb5c_row2_col2 {
   background-color: #d4e6f1;
   color: #000000;
 }
-#T_034ff_row2_col3 {
+#T_9fb5c_row2_col3 {
   background-color: #f2a17f;
   color: #000000;
 }
-#T_034ff_row2_col4 {
+#T_9fb5c_row2_col4 {
   background-color: #760521;
   color: #f1f1f1;
 }
-#T_034ff_row2_col5 {
+#T_9fb5c_row2_col5 {
   background-color: #b6d7e8;
   color: #000000;
 }
-#T_034ff_row2_col8 {
+#T_9fb5c_row2_col8 {
   background-color: #d55d4c;
   color: #f1f1f1;
 }
-#T_034ff_row3_col0 {
+#T_9fb5c_row3_col0 {
   background-color: #9dcbe1;
   color: #000000;
 }
-#T_034ff_row3_col1 {
+#T_9fb5c_row3_col1 {
   background-color: #93c6de;
   color: #000000;
 }
-#T_034ff_row3_col2 {
+#T_9fb5c_row3_col2 {
   background-color: #6bacd1;
   color: #f1f1f1;
 }
-#T_034ff_row3_col4 {
+#T_9fb5c_row3_col4 {
   background-color: #fae7dc;
   color: #000000;
 }
-#T_034ff_row3_col5 {
+#T_9fb5c_row3_col5 {
   background-color: #78b4d5;
   color: #000000;
 }
-#T_034ff_row3_col6 {
+#T_9fb5c_row3_col6 {
   background-color: #f9f0eb;
   color: #000000;
 }
-#T_034ff_row3_col8 {
+#T_9fb5c_row3_col8 {
   background-color: #edf2f5;
   color: #000000;
 }
 </style>
-<table id="T_034ff">
+<table id="T_9fb5c">
 <thead>
 <tr>
 <th class="blank level0"> </th>
-<th class="col_heading level0 col0" id="T_034ff_level0_col0">tackles_padj_z</th>
-<th class="col_heading level0 col1" id="T_034ff_level0_col1">ints_padj_z</th>
-<th class="col_heading level0 col2" id="T_034ff_level0_col2">pos won_padj_z</th>
-<th class="col_heading level0 col3" id="T_034ff_level0_col3">blocks_padj_z</th>
-<th class="col_heading level0 col4" id="T_034ff_level0_col4">clearances_padj_z</th>
-<th class="col_heading level0 col5" id="T_034ff_level0_col5">Ground Duels -total_padj_z</th>
-<th class="col_heading level0 col6" id="T_034ff_level0_col6">Ground Duels %_z</th>
-<th class="col_heading level0 col7" id="T_034ff_level0_col7">Aerial Duels -total_padj_z</th>
-<th class="col_heading level0 col8" id="T_034ff_level0_col8">Aerial Duels %_z</th>
+<th class="col_heading level0 col0" id="T_9fb5c_level0_col0">tackles_padj_z</th>
+<th class="col_heading level0 col1" id="T_9fb5c_level0_col1">ints_padj_z</th>
+<th class="col_heading level0 col2" id="T_9fb5c_level0_col2">pos won_padj_z</th>
+<th class="col_heading level0 col3" id="T_9fb5c_level0_col3">blocks_padj_z</th>
+<th class="col_heading level0 col4" id="T_9fb5c_level0_col4">clearances_padj_z</th>
+<th class="col_heading level0 col5" id="T_9fb5c_level0_col5">Ground Duels -total_padj_z</th>
+<th class="col_heading level0 col6" id="T_9fb5c_level0_col6">Ground Duels %_z</th>
+<th class="col_heading level0 col7" id="T_9fb5c_level0_col7">Aerial Duels -total_padj_z</th>
+<th class="col_heading level0 col8" id="T_9fb5c_level0_col8">Aerial Duels %_z</th>
 </tr>
 <tr>
 <th class="index_name level0">Cluster</th>
@@ -10051,52 +10043,52 @@ Centroid z-scores (for verification):
 </thead>
 <tbody>
 <tr>
-<th class="row_heading level0 row0" id="T_034ff_level0_row0">0</th>
-<td class="data row0 col0" id="T_034ff_row0_col0">0.10</td>
-<td class="data row0 col1" id="T_034ff_row0_col1">-0.35</td>
-<td class="data row0 col2" id="T_034ff_row0_col2">0.14</td>
-<td class="data row0 col3" id="T_034ff_row0_col3">-0.61</td>
-<td class="data row0 col4" id="T_034ff_row0_col4">-1.07</td>
-<td class="data row0 col5" id="T_034ff_row0_col5">0.36</td>
-<td class="data row0 col6" id="T_034ff_row0_col6">-0.63</td>
-<td class="data row0 col7" id="T_034ff_row0_col7">-0.87</td>
-<td class="data row0 col8" id="T_034ff_row0_col8">-1.09</td>
+<th class="row_heading level0 row0" id="T_9fb5c_level0_row0">0</th>
+<td class="data row0 col0" id="T_9fb5c_row0_col0">0.10</td>
+<td class="data row0 col1" id="T_9fb5c_row0_col1">-0.35</td>
+<td class="data row0 col2" id="T_9fb5c_row0_col2">0.14</td>
+<td class="data row0 col3" id="T_9fb5c_row0_col3">-0.61</td>
+<td class="data row0 col4" id="T_9fb5c_row0_col4">-1.07</td>
+<td class="data row0 col5" id="T_9fb5c_row0_col5">0.36</td>
+<td class="data row0 col6" id="T_9fb5c_row0_col6">-0.63</td>
+<td class="data row0 col7" id="T_9fb5c_row0_col7">-0.87</td>
+<td class="data row0 col8" id="T_9fb5c_row0_col8">-1.09</td>
 </tr>
 <tr>
-<th class="row_heading level0 row1" id="T_034ff_level0_row1">1</th>
-<td class="data row1 col0" id="T_034ff_row1_col0">0.78</td>
-<td class="data row1 col1" id="T_034ff_row1_col1">0.85</td>
-<td class="data row1 col2" id="T_034ff_row1_col2">1.15</td>
-<td class="data row1 col3" id="T_034ff_row1_col3">-0.53</td>
-<td class="data row1 col4" id="T_034ff_row1_col4">-0.38</td>
-<td class="data row1 col5" id="T_034ff_row1_col5">1.02</td>
-<td class="data row1 col6" id="T_034ff_row1_col6">0.13</td>
-<td class="data row1 col7" id="T_034ff_row1_col7">0.64</td>
-<td class="data row1 col8" id="T_034ff_row1_col8">0.34</td>
+<th class="row_heading level0 row1" id="T_9fb5c_level0_row1">1</th>
+<td class="data row1 col0" id="T_9fb5c_row1_col0">0.78</td>
+<td class="data row1 col1" id="T_9fb5c_row1_col1">0.85</td>
+<td class="data row1 col2" id="T_9fb5c_row1_col2">1.15</td>
+<td class="data row1 col3" id="T_9fb5c_row1_col3">-0.53</td>
+<td class="data row1 col4" id="T_9fb5c_row1_col4">-0.38</td>
+<td class="data row1 col5" id="T_9fb5c_row1_col5">1.02</td>
+<td class="data row1 col6" id="T_9fb5c_row1_col6">0.13</td>
+<td class="data row1 col7" id="T_9fb5c_row1_col7">0.64</td>
+<td class="data row1 col8" id="T_9fb5c_row1_col8">0.34</td>
 </tr>
 <tr>
-<th class="row_heading level0 row2" id="T_034ff_level0_row2">2</th>
-<td class="data row2 col0" id="T_034ff_row2_col0">-0.09</td>
-<td class="data row2 col1" id="T_034ff_row2_col1">0.40</td>
-<td class="data row2 col2" id="T_034ff_row2_col2">-0.27</td>
-<td class="data row2 col3" id="T_034ff_row2_col3">0.61</td>
-<td class="data row2 col4" id="T_034ff_row2_col4">1.44</td>
-<td class="data row2 col5" id="T_034ff_row2_col5">-0.43</td>
-<td class="data row2 col6" id="T_034ff_row2_col6">0.35</td>
-<td class="data row2 col7" id="T_034ff_row2_col7">0.78</td>
-<td class="data row2 col8" id="T_034ff_row2_col8">0.91</td>
+<th class="row_heading level0 row2" id="T_9fb5c_level0_row2">2</th>
+<td class="data row2 col0" id="T_9fb5c_row2_col0">-0.09</td>
+<td class="data row2 col1" id="T_9fb5c_row2_col1">0.40</td>
+<td class="data row2 col2" id="T_9fb5c_row2_col2">-0.27</td>
+<td class="data row2 col3" id="T_9fb5c_row2_col3">0.61</td>
+<td class="data row2 col4" id="T_9fb5c_row2_col4">1.44</td>
+<td class="data row2 col5" id="T_9fb5c_row2_col5">-0.43</td>
+<td class="data row2 col6" id="T_9fb5c_row2_col6">0.35</td>
+<td class="data row2 col7" id="T_9fb5c_row2_col7">0.78</td>
+<td class="data row2 col8" id="T_9fb5c_row2_col8">0.91</td>
 </tr>
 <tr>
-<th class="row_heading level0 row3" id="T_034ff_level0_row3">3</th>
-<td class="data row3 col0" id="T_034ff_row3_col0">-0.55</td>
-<td class="data row3 col1" id="T_034ff_row3_col1">-0.59</td>
-<td class="data row3 col2" id="T_034ff_row3_col2">-0.74</td>
-<td class="data row3 col3" id="T_034ff_row3_col3">0.40</td>
-<td class="data row3 col4" id="T_034ff_row3_col4">0.17</td>
-<td class="data row3 col5" id="T_034ff_row3_col5">-0.70</td>
-<td class="data row3 col6" id="T_034ff_row3_col6">0.08</td>
-<td class="data row3 col7" id="T_034ff_row3_col7">-0.34</td>
-<td class="data row3 col8" id="T_034ff_row3_col8">-0.08</td>
+<th class="row_heading level0 row3" id="T_9fb5c_level0_row3">3</th>
+<td class="data row3 col0" id="T_9fb5c_row3_col0">-0.55</td>
+<td class="data row3 col1" id="T_9fb5c_row3_col1">-0.59</td>
+<td class="data row3 col2" id="T_9fb5c_row3_col2">-0.74</td>
+<td class="data row3 col3" id="T_9fb5c_row3_col3">0.40</td>
+<td class="data row3 col4" id="T_9fb5c_row3_col4">0.17</td>
+<td class="data row3 col5" id="T_9fb5c_row3_col5">-0.70</td>
+<td class="data row3 col6" id="T_9fb5c_row3_col6">0.08</td>
+<td class="data row3 col7" id="T_9fb5c_row3_col7">-0.34</td>
+<td class="data row3 col8" id="T_9fb5c_row3_col8">-0.08</td>
 </tr>
 </tbody>
 </table>
@@ -10175,7 +10167,7 @@ Centroid z-scores (for verification):
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Reading the territory map.</strong> The four hulls are well-separated in PC1-PC2 space, with overlap concentrated near the origin where the natural "hybrid" players sit. PC1 acts as a defensive volume axis: low volume on the left (Aerial Stoppers and Coverage Defenders, who let the ball come to them), high volume on the right (Aggressors, who go and get it). PC2 splits the upper aerial / box work from the lower ground-only work.</p>
+<p>The four hulls are well-separated in PC1-PC2 space, with overlap concentrated near the origin where the natural "hybrid" players sit. PC1 acts as a defensive volume axis: low volume on the left (Aerial Stoppers and Coverage Defenders, who let the ball come to them), high volume on the right (Aggressors, who go and get it). PC2 splits the upper aerial / box work from the lower ground-only work.</p>
 <p>A few players are visible at the edges of their hulls, not random noise but extreme expressions of the profile: Acerbi (top-left) is an extreme Aerial Stopper, Scalvini (top-right) sits at the most aggressive edge of the Aggressor group, Kolasinac is isolated on the right of the Ground Specialist hull and probably deserves attention as a tactical outlier. The players sitting near the center (Vásquez, Pongracic, Beukema) are the textbook hybrids that soft clustering will reveal as split across multiple profiles.</p>
 </div>
 </div>
@@ -10725,7 +10717,7 @@ SCOUTING PROFILE: CLUSTER 3: Coverage Defender
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Reading the radar.</strong> Each profile has a distinct silhouette and the four shapes barely overlap, which is the visual confirmation that K=4 captures real tactical variation, not noise.</p>
+<p>Each profile has a distinct silhouette and the four shapes barely overlap, which is the visual confirmation that K=4 captures real tactical variation, not noise.</p>
 <p>The <strong>Aggressor</strong> (blue) stretches sharply towards Pos Won, Ints, Tackles and Ground Duels Total, and collapses on the Blocks / Clearances side. These are defenders who win the ball forward, not who clear it from the box.</p>
 <p>The <strong>Aerial Stopper</strong> (red) is the mirror opposite: dominant on Clearances (the single largest spike on the whole chart, around +1.3σ), strong on Aerial Duels % and Aerial Volume, weak on Tackles and Pos Won. Classic stay-at-home profile.</p>
 <p>The <strong>Ground Specialist</strong> (green) is defined less by what it does and more by what it doesn't: the shape collapses on the right side of the chart (Aerial Duels % and Aerial Total). The aerial weakness is the signature.</p>
@@ -10964,72 +10956,72 @@ SCOUTING PROFILE: CLUSTER 3: Coverage Defender
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
-#T_e6714_row0_col3 {
+#T_c3462_row0_col3 {
   background-color: #00441b;
   color: #f1f1f1;
 }
-#T_e6714_row1_col3 {
+#T_c3462_row1_col3 {
   background-color: #137d39;
   color: #f1f1f1;
 }
-#T_e6714_row2_col3 {
+#T_c3462_row2_col3 {
   background-color: #90d18d;
   color: #000000;
 }
-#T_e6714_row3_col3 {
+#T_c3462_row3_col3 {
   background-color: #e9f7e5;
   color: #000000;
 }
-#T_e6714_row4_col3 {
+#T_c3462_row4_col3 {
   background-color: #f7fcf5;
   color: #000000;
 }
 </style>
-<table id="T_e6714">
+<table id="T_c3462">
 <thead>
 <tr>
 <th class="blank level0"> </th>
-<th class="col_heading level0 col0" id="T_e6714_level0_col0">name</th>
-<th class="col_heading level0 col1" id="T_e6714_level0_col1">team</th>
-<th class="col_heading level0 col2" id="T_e6714_level0_col2">Cluster_Name</th>
-<th class="col_heading level0 col3" id="T_e6714_level0_col3">Max_Percentage</th>
+<th class="col_heading level0 col0" id="T_c3462_level0_col0">name</th>
+<th class="col_heading level0 col1" id="T_c3462_level0_col1">team</th>
+<th class="col_heading level0 col2" id="T_c3462_level0_col2">Cluster_Name</th>
+<th class="col_heading level0 col3" id="T_c3462_level0_col3">Max_Percentage</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<th class="row_heading level0 row0" id="T_e6714_level0_row0">6</th>
-<td class="data row0 col0" id="T_e6714_row0_col0">Gianluca Mancini</td>
-<td class="data row0 col1" id="T_e6714_row0_col1">Roma</td>
-<td class="data row0 col2" id="T_e6714_row0_col2">Aggressor</td>
-<td class="data row0 col3" id="T_e6714_row0_col3">68.200000</td>
+<th class="row_heading level0 row0" id="T_c3462_level0_row0">6</th>
+<td class="data row0 col0" id="T_c3462_row0_col0">Gianluca Mancini</td>
+<td class="data row0 col1" id="T_c3462_row0_col1">Roma</td>
+<td class="data row0 col2" id="T_c3462_row0_col2">Aggressor</td>
+<td class="data row0 col3" id="T_c3462_row0_col3">68.200000</td>
 </tr>
 <tr>
-<th class="row_heading level0 row1" id="T_e6714_level0_row1">53</th>
-<td class="data row1 col0" id="T_e6714_row1_col0">Carlos Augusto</td>
-<td class="data row1 col1" id="T_e6714_row1_col1">Inter</td>
-<td class="data row1 col2" id="T_e6714_row1_col2">Aggressor</td>
-<td class="data row1 col3" id="T_e6714_row1_col3">64.300000</td>
+<th class="row_heading level0 row1" id="T_c3462_level0_row1">53</th>
+<td class="data row1 col0" id="T_c3462_row1_col0">Carlos Augusto</td>
+<td class="data row1 col1" id="T_c3462_row1_col1">Inter</td>
+<td class="data row1 col2" id="T_c3462_row1_col2">Aggressor</td>
+<td class="data row1 col3" id="T_c3462_row1_col3">64.300000</td>
 </tr>
 <tr>
-<th class="row_heading level0 row2" id="T_e6714_level0_row2">34</th>
-<td class="data row2 col0" id="T_e6714_row2_col0">Jhon Lucumí</td>
-<td class="data row2 col1" id="T_e6714_row2_col1">Bologna</td>
-<td class="data row2 col2" id="T_e6714_row2_col2">Aggressor</td>
-<td class="data row2 col3" id="T_e6714_row2_col3">56.600000</td>
+<th class="row_heading level0 row2" id="T_c3462_level0_row2">34</th>
+<td class="data row2 col0" id="T_c3462_row2_col0">Jhon Lucumí</td>
+<td class="data row2 col1" id="T_c3462_row2_col1">Bologna</td>
+<td class="data row2 col2" id="T_c3462_row2_col2">Aggressor</td>
+<td class="data row2 col3" id="T_c3462_row2_col3">56.600000</td>
 </tr>
 <tr>
-<th class="row_heading level0 row3" id="T_e6714_level0_row3">37</th>
-<td class="data row3 col0" id="T_e6714_row3_col0">Alessandro Bastoni</td>
-<td class="data row3 col1" id="T_e6714_row3_col1">Inter</td>
-<td class="data row3 col2" id="T_e6714_row3_col2">Aggressor</td>
-<td class="data row3 col3" id="T_e6714_row3_col3">50.100000</td>
+<th class="row_heading level0 row3" id="T_c3462_level0_row3">37</th>
+<td class="data row3 col0" id="T_c3462_row3_col0">Alessandro Bastoni</td>
+<td class="data row3 col1" id="T_c3462_row3_col1">Inter</td>
+<td class="data row3 col2" id="T_c3462_row3_col2">Aggressor</td>
+<td class="data row3 col3" id="T_c3462_row3_col3">50.100000</td>
 </tr>
 <tr>
-<th class="row_heading level0 row4" id="T_e6714_level0_row4">7</th>
-<td class="data row4 col0" id="T_e6714_row4_col0">Jay Idzes</td>
-<td class="data row4 col1" id="T_e6714_row4_col1">Sassuolo</td>
-<td class="data row4 col2" id="T_e6714_row4_col2">Coverage Defender</td>
-<td class="data row4 col3" id="T_e6714_row4_col3">48.100000</td>
+<th class="row_heading level0 row4" id="T_c3462_level0_row4">7</th>
+<td class="data row4 col0" id="T_c3462_row4_col0">Jay Idzes</td>
+<td class="data row4 col1" id="T_c3462_row4_col1">Sassuolo</td>
+<td class="data row4 col2" id="T_c3462_row4_col2">Coverage Defender</td>
+<td class="data row4 col3" id="T_c3462_row4_col3">48.100000</td>
 </tr>
 </tbody>
 </table>
@@ -11048,96 +11040,96 @@ TOP 5 HYBRID PROFILES
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
-#T_53f89_row0_col3 {
+#T_98f88_row0_col3 {
   background-color: #ffffcc;
   color: #000000;
 }
-#T_53f89_row1_col3 {
+#T_98f88_row1_col3 {
   background-color: #ffe998;
   color: #000000;
 }
-#T_53f89_row2_col3 {
+#T_98f88_row2_col3 {
   background-color: #febf5a;
   color: #000000;
 }
-#T_53f89_row3_col3 {
+#T_98f88_row3_col3 {
   background-color: #fd913e;
   color: #000000;
 }
-#T_53f89_row4_col3 {
+#T_98f88_row4_col3 {
   background-color: #800026;
   color: #f1f1f1;
 }
 </style>
-<table id="T_53f89">
+<table id="T_98f88">
 <thead>
 <tr>
 <th class="blank level0"> </th>
-<th class="col_heading level0 col0" id="T_53f89_level0_col0">name</th>
-<th class="col_heading level0 col1" id="T_53f89_level0_col1">team</th>
-<th class="col_heading level0 col2" id="T_53f89_level0_col2">Cluster_Name</th>
-<th class="col_heading level0 col3" id="T_53f89_level0_col3">Max_Percentage</th>
-<th class="col_heading level0 col4" id="T_53f89_level0_col4">Cluster_0_%</th>
-<th class="col_heading level0 col5" id="T_53f89_level0_col5">Cluster_1_%</th>
-<th class="col_heading level0 col6" id="T_53f89_level0_col6">Cluster_2_%</th>
-<th class="col_heading level0 col7" id="T_53f89_level0_col7">Cluster_3_%</th>
+<th class="col_heading level0 col0" id="T_98f88_level0_col0">name</th>
+<th class="col_heading level0 col1" id="T_98f88_level0_col1">team</th>
+<th class="col_heading level0 col2" id="T_98f88_level0_col2">Cluster_Name</th>
+<th class="col_heading level0 col3" id="T_98f88_level0_col3">Max_Percentage</th>
+<th class="col_heading level0 col4" id="T_98f88_level0_col4">Cluster_0_%</th>
+<th class="col_heading level0 col5" id="T_98f88_level0_col5">Cluster_1_%</th>
+<th class="col_heading level0 col6" id="T_98f88_level0_col6">Cluster_2_%</th>
+<th class="col_heading level0 col7" id="T_98f88_level0_col7">Cluster_3_%</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<th class="row_heading level0 row0" id="T_53f89_level0_row0">30</th>
-<td class="data row0 col0" id="T_53f89_row0_col0">Mario Gila</td>
-<td class="data row0 col1" id="T_53f89_row0_col1">Lazio</td>
-<td class="data row0 col2" id="T_53f89_row0_col2">Aggressor</td>
-<td class="data row0 col3" id="T_53f89_row0_col3">28.300000</td>
-<td class="data row0 col4" id="T_53f89_row0_col4">22.100000</td>
-<td class="data row0 col5" id="T_53f89_row0_col5">28.300000</td>
-<td class="data row0 col6" id="T_53f89_row0_col6">24.000000</td>
-<td class="data row0 col7" id="T_53f89_row0_col7">25.500000</td>
+<th class="row_heading level0 row0" id="T_98f88_level0_row0">30</th>
+<td class="data row0 col0" id="T_98f88_row0_col0">Mario Gila</td>
+<td class="data row0 col1" id="T_98f88_row0_col1">Lazio</td>
+<td class="data row0 col2" id="T_98f88_row0_col2">Aggressor</td>
+<td class="data row0 col3" id="T_98f88_row0_col3">28.300000</td>
+<td class="data row0 col4" id="T_98f88_row0_col4">22.100000</td>
+<td class="data row0 col5" id="T_98f88_row0_col5">28.300000</td>
+<td class="data row0 col6" id="T_98f88_row0_col6">24.000000</td>
+<td class="data row0 col7" id="T_98f88_row0_col7">25.500000</td>
 </tr>
 <tr>
-<th class="row_heading level0 row1" id="T_53f89_level0_row1">2</th>
-<td class="data row1 col0" id="T_53f89_row1_col0">Johan Vásquez</td>
-<td class="data row1 col1" id="T_53f89_row1_col1">Genoa</td>
-<td class="data row1 col2" id="T_53f89_row1_col2">Coverage Defender</td>
-<td class="data row1 col3" id="T_53f89_row1_col3">28.800000</td>
-<td class="data row1 col4" id="T_53f89_row1_col4">24.100000</td>
-<td class="data row1 col5" id="T_53f89_row1_col5">24.000000</td>
-<td class="data row1 col6" id="T_53f89_row1_col6">23.200000</td>
-<td class="data row1 col7" id="T_53f89_row1_col7">28.800000</td>
+<th class="row_heading level0 row1" id="T_98f88_level0_row1">2</th>
+<td class="data row1 col0" id="T_98f88_row1_col0">Johan Vásquez</td>
+<td class="data row1 col1" id="T_98f88_row1_col1">Genoa</td>
+<td class="data row1 col2" id="T_98f88_row1_col2">Coverage Defender</td>
+<td class="data row1 col3" id="T_98f88_row1_col3">28.800000</td>
+<td class="data row1 col4" id="T_98f88_row1_col4">24.100000</td>
+<td class="data row1 col5" id="T_98f88_row1_col5">24.000000</td>
+<td class="data row1 col6" id="T_98f88_row1_col6">23.200000</td>
+<td class="data row1 col7" id="T_98f88_row1_col7">28.800000</td>
 </tr>
 <tr>
-<th class="row_heading level0 row2" id="T_53f89_level0_row2">74</th>
-<td class="data row2 col0" id="T_53f89_row2_col0">Juan Rodríguez</td>
-<td class="data row2 col1" id="T_53f89_row2_col1">Cagliari</td>
-<td class="data row2 col2" id="T_53f89_row2_col2">Coverage Defender</td>
-<td class="data row2 col3" id="T_53f89_row2_col3">29.400000</td>
-<td class="data row2 col4" id="T_53f89_row2_col4">24.700000</td>
-<td class="data row2 col5" id="T_53f89_row2_col5">21.900000</td>
-<td class="data row2 col6" id="T_53f89_row2_col6">23.900000</td>
-<td class="data row2 col7" id="T_53f89_row2_col7">29.400000</td>
+<th class="row_heading level0 row2" id="T_98f88_level0_row2">74</th>
+<td class="data row2 col0" id="T_98f88_row2_col0">Juan Rodríguez</td>
+<td class="data row2 col1" id="T_98f88_row2_col1">Cagliari</td>
+<td class="data row2 col2" id="T_98f88_row2_col2">Coverage Defender</td>
+<td class="data row2 col3" id="T_98f88_row2_col3">29.400000</td>
+<td class="data row2 col4" id="T_98f88_row2_col4">24.700000</td>
+<td class="data row2 col5" id="T_98f88_row2_col5">21.900000</td>
+<td class="data row2 col6" id="T_98f88_row2_col6">23.900000</td>
+<td class="data row2 col7" id="T_98f88_row2_col7">29.400000</td>
 </tr>
 <tr>
-<th class="row_heading level0 row3" id="T_53f89_level0_row3">65</th>
-<td class="data row3 col0" id="T_53f89_row3_col0">Martin Vitík</td>
-<td class="data row3 col1" id="T_53f89_row3_col1">Bologna</td>
-<td class="data row3 col2" id="T_53f89_row3_col2">Aerial Stopper</td>
-<td class="data row3 col3" id="T_53f89_row3_col3">29.900000</td>
-<td class="data row3 col4" id="T_53f89_row3_col4">19.400000</td>
-<td class="data row3 col5" id="T_53f89_row3_col5">27.900000</td>
-<td class="data row3 col6" id="T_53f89_row3_col6">29.900000</td>
-<td class="data row3 col7" id="T_53f89_row3_col7">22.900000</td>
+<th class="row_heading level0 row3" id="T_98f88_level0_row3">65</th>
+<td class="data row3 col0" id="T_98f88_row3_col0">Martin Vitík</td>
+<td class="data row3 col1" id="T_98f88_row3_col1">Bologna</td>
+<td class="data row3 col2" id="T_98f88_row3_col2">Aerial Stopper</td>
+<td class="data row3 col3" id="T_98f88_row3_col3">29.900000</td>
+<td class="data row3 col4" id="T_98f88_row3_col4">19.400000</td>
+<td class="data row3 col5" id="T_98f88_row3_col5">27.900000</td>
+<td class="data row3 col6" id="T_98f88_row3_col6">29.900000</td>
+<td class="data row3 col7" id="T_98f88_row3_col7">22.900000</td>
 </tr>
 <tr>
-<th class="row_heading level0 row4" id="T_53f89_level0_row4">41</th>
-<td class="data row4 col0" id="T_53f89_row4_col0">Guillermo Maripán</td>
-<td class="data row4 col1" id="T_53f89_row4_col1">Torino</td>
-<td class="data row4 col2" id="T_53f89_row4_col2">Coverage Defender</td>
-<td class="data row4 col3" id="T_53f89_row4_col3">31.600000</td>
-<td class="data row4 col4" id="T_53f89_row4_col4">19.200000</td>
-<td class="data row4 col5" id="T_53f89_row4_col5">18.700000</td>
-<td class="data row4 col6" id="T_53f89_row4_col6">30.500000</td>
-<td class="data row4 col7" id="T_53f89_row4_col7">31.600000</td>
+<th class="row_heading level0 row4" id="T_98f88_level0_row4">41</th>
+<td class="data row4 col0" id="T_98f88_row4_col0">Guillermo Maripán</td>
+<td class="data row4 col1" id="T_98f88_row4_col1">Torino</td>
+<td class="data row4 col2" id="T_98f88_row4_col2">Coverage Defender</td>
+<td class="data row4 col3" id="T_98f88_row4_col3">31.600000</td>
+<td class="data row4 col4" id="T_98f88_row4_col4">19.200000</td>
+<td class="data row4 col5" id="T_98f88_row4_col5">18.700000</td>
+<td class="data row4 col6" id="T_98f88_row4_col6">30.500000</td>
+<td class="data row4 col7" id="T_98f88_row4_col7">31.600000</td>
 </tr>
 </tbody>
 </table>
@@ -11322,7 +11314,7 @@ TOP 5 HYBRID PROFILES
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><strong>Reading the team DNA.</strong> The chart aggregates individual cluster assignments back up to the team level (weighted by minutes played), and the resulting ranking is football-legible.</p>
+<p>The chart aggregates individual cluster assignments back up to the team level (weighted by minutes played), and the resulting ranking is football-legible.</p>
 <p><strong>Roma, Inter, Napoli, Atalanta and Juventus dominate the Aggressor share.</strong> These are the high-line possession teams whose centre-backs are positioned forward to win the ball back early. Roma in particular is at 100%: every single one of their CBs (Mancini, Ndicka, Hermoso) lands in the Aggressor cluster. This is the most extreme defensive-style team in the league.</p>
 <p><strong>Verona is the most diverse profile</strong>: only ~10% Aggressor, a dominant ~60% Aerial Stopper share, plus minor Ground and Coverage contributions. Classic defensive-block setup where CBs absorb crosses and long balls rather than press forward.</p>
 <p><strong>Parma and Cremonese sit at ~100% Coverage Defender</strong>: their CBs are all low-volume profiles. This isn't a quality judgement, it's a tactical signature consistent with deep-block teams that funnel play away from their centre-backs.</p>
@@ -11353,22 +11345,25 @@ and <code>cluster_name_map.json</code>.</p>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="c1"># Export</span>
-<span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">'processed_defenders_data.csv'</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="n">df_pca</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">'pca_coordinates.csv'</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="s1">'data'</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">'data/processed_defenders_data.csv'</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">df_pca</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">'data/pca_coordinates.csv'</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_json</span>
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">'radar_metrics.json'</span><span class="p">,</span> <span class="s1">'w'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">'data/radar_metrics.json'</span><span class="p">,</span> <span class="s1">'w'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
     <span class="n">_json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">z_columns</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
 
 <span class="c1"># Also export the cluster name mapping so app.py can pick it up</span>
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">'cluster_name_map.json'</span><span class="p">,</span> <span class="s1">'w'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">'data/cluster_name_map.json'</span><span class="p">,</span> <span class="s1">'w'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
     <span class="n">_json</span><span class="o">.</span><span class="n">dump</span><span class="p">({</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">cluster_name_map</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s2">"Files written:"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"   processed_defenders_data.csv"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"   pca_coordinates.csv"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"   radar_metrics.json"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"   cluster_name_map.json"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Files written to data/:"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"   data/processed_defenders_data.csv"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"   data/pca_coordinates.csv"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"   data/radar_metrics.json"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"   data/cluster_name_map.json"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Cluster -&gt; Name mapping: </span><span class="si">{</span><span class="n">cluster_name_map</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -11382,11 +11377,11 @@ and <code>cluster_name_map.json</code>.</p>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Files written:
-   processed_defenders_data.csv
-   pca_coordinates.csv
-   radar_metrics.json
-   cluster_name_map.json
+<pre>Files written to data/:
+   data/processed_defenders_data.csv
+   data/pca_coordinates.csv
+   data/radar_metrics.json
+   data/cluster_name_map.json
 
 Cluster -&gt; Name mapping: {np.int32(1): 'Aggressor', np.int32(2): 'Aerial Stopper', np.int32(0): 'Ground Specialist', np.int32(3): 'Coverage Defender'}
 </pre>
@@ -11401,12 +11396,12 @@ Cluster -&gt; Name mapping: {np.int32(1): 'Aggressor', np.int32(2): 'Aerial Stop
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="How-the-Outputs-Feed-the-App">How the Outputs Feed the App<a class="anchor-link" href="#How-the-Outputs-Feed-the-App">¶</a></h2><p>The exported files are read by <code>app.py</code> at startup:</p>
+<h2 id="How-the-Outputs-Feed-the-App">How the Outputs Feed the App<a class="anchor-link" href="#How-the-Outputs-Feed-the-App">¶</a></h2><p>The exported files (under <code>data/</code>) are read by <code>app.py</code> at startup:</p>
 <ul>
-<li><code>processed_defenders_data.csv</code> powers the <strong>Market Explorer</strong>, <strong>Player DNA</strong>, <strong>Team DNA</strong> and <strong>Metric Explorer</strong> tabs (full player table with cluster labels and soft membership %)</li>
-<li><code>pca_coordinates.csv</code> is the geometry the <strong>Clone Finder</strong> uses to compute Euclidean similarity between defenders</li>
-<li><code>radar_metrics.json</code> lists the z-score columns plotted in the <strong>Radar</strong> comparison charts</li>
-<li><code>cluster_name_map.json</code> lets the app translate the integer Cluster IDs into the canonical profile names without hard-coding them</li>
+<li><code>data/processed_defenders_data.csv</code> powers the <strong>Market Explorer</strong>, <strong>Player DNA</strong>, <strong>Team DNA</strong> and <strong>Metric Explorer</strong> tabs (full player table with cluster labels and soft membership %)</li>
+<li><code>data/pca_coordinates.csv</code> is the geometry the <strong>Clone Finder</strong> uses to compute Euclidean similarity between defenders</li>
+<li><code>data/radar_metrics.json</code> lists the z-score columns plotted in the <strong>Radar</strong> comparison charts</li>
+<li><code>data/cluster_name_map.json</code> lets the app translate the integer Cluster IDs into the canonical profile names without hard-coding them</li>
 </ul>
 </div>
 </div>

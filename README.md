@@ -75,6 +75,8 @@ Raw defensive event data and metrics are powered by **Opta / Stats Perform** (ac
 
 The full analysis pipeline lives in [`Clustering_defenders_SerieA.ipynb`](Clustering_defenders_SerieA.ipynb), an end-to-end notebook with executed outputs and inline interpretation of every chart. For a quick read without cloning the repo, an **HTML render** is also published: [`Clustering_defenders_SerieA.html`](Clustering_defenders_SerieA.html).
 
+The notebook writes its four output artefacts to the [`data/`](data/) folder, which is what `app.py` reads at startup — keeping code and processed data cleanly separated.
+
 ---
 
 ## 🔁 Stability Check: March vs End-of-Season
