@@ -21,47 +21,44 @@ The project is structured in two connected parts: an interactive **Streamlit Web
 
 The clustering pipeline identifies four data-driven profiles among Serie A center-backs. The labels are derived directly from the centroid signatures, not assigned a priori. Each name describes what the data actually shows.
 
+All percentages below are **deviations of the cluster centroid from the league average** on PAdj per-90 metrics (so a high-possession Inter CB and a low-possession Lecce CB are on the same scale). For win-rate metrics (Aerial Duels %, Ground Duels %) the value in parentheses is the absolute centroid, with the deviation in percentage-points (pp).
+
 | Profile | Color | Data Signature (vs. league avg.) | Football Interpretation |
 |---|---|---|---|
-| **Aggressor / Ball-Winner** | 🔵 | Tackles +27%, Interceptions +27%, Possessions Won +38%, Ground Duels engaged +30%, Aerial Duels engaged +22% | Centre-backs of dominant, high-line teams. Step up rather than drop, recover the ball forward. Top sources: Inter, Roma, Napoli, Juventus, Atalanta. |
-| **Aerial Stopper** | 🔴 | Clearances +37%, Aerial Duels engaged +26%, Aerial win rate ~65% (+13%), Blocks +21% | Classic stay-at-home centre-back. Holds the line, absorbs pressure, dominates the box. Top sources: Hellas Verona, Como, Lecce, Sassuolo, Genoa. |
-| **Ground Specialist** | 🟢 | Ground Duels +10%, Tackles +3%, but Aerial Duels engaged -29% and Aerial win rate ~49% (-15%) | Strong on the ground but physically out-matched in the air. Fits as a wide centre-back in a back three or as a technical defender in possession-based sides. Top sources: Cagliari, Milan, Fiorentina, Sassuolo. |
-| **Coverage Defender** | 🟠 | Tackles -19%, Possessions Won -24%, Ground Duels -20%, Aerial Duels -12%, Blocks +14% | Two overlapping sub-profiles: fullbacks redeployed wide in a back three, and defenders in deep blocks where play is funneled away. Top sources: Cremonese, Parma, Torino, Pisa. |
+| **Aggressor / Ball-Winner** | 🔵 | Possessions Won **+38%**, Ground Duels engaged **+30%**, Interceptions **+27%**, Tackles **+27%**, Aerial Duels engaged **+22%**. Win-rate is roughly league-average (AD% 60.5, +3pp). Blocks **-18%** and Clearances **-10%** — they win the ball before it reaches the box. | Centre-backs of dominant, high-line teams. They step up rather than drop and recover possession in midfield areas. The most stable archetype across stability tests. Most represented at: **Inter, Roma, Napoli, Juventus, Atalanta**. |
+| **Aerial Stopper** | 🔴 | Clearances **+37%**, Aerial Duels engaged **+26%**, Blocks **+21%**, Aerial win rate **65%** (+7pp, the highest of the four profiles). Ground engagement is below the league average (Ground Duels engaged **-12%**, Tackles **-3%**). | Classic stay-at-home centre-back. Holds the defensive line, absorbs crosses, dominates the box. Most represented at: **Hellas Verona, Como, Lecce**. |
+| **Ground Specialist** | 🟢 | Ground Duels engaged **+10%**, but the defining trait is a clear aerial weakness: Aerial Duels engaged **-29%**, Aerial win rate **49%** (-9pp, the worst of the four), Clearances **-28%**. Tackles roughly league-average (+3%). | Defenders who can compete on the ground but are physically out-matched in the air. Often fit as wide centre-backs in a back three or as technical defenders in possession-based sides where the team prevents aerial duels from happening. Most represented at: **Milan, Cagliari, Fiorentina**. |
+| **Coverage Defender** | 🟠 | Below average across most volume metrics: Possessions Won **-24%**, Ground Duels engaged **-20%**, Interceptions **-19%**, Tackles **-19%**, Aerial Duels engaged **-12%**. Slight uplift on box actions (Blocks **+14%**, Clearances **+4%**). Win-rates near league average. | Low-engagement defenders, two overlapping sub-profiles: fullbacks redeployed wide in a back three, and centre-backs in deep blocks where the team funnels play away from them. Low volume is a tactical signature, not a quality judgement. Most represented at: **Cremonese, Parma, Pisa**. |
 
 ---
 
 ## 🖥️ The Frontend: Streamlit Dashboard
-The `app.py` Streamlit dashboard is designed to make complex mathematical models accessible for football scouting. It reads the processed datasets and PCA coordinates to provide a dynamic, click-and-play interface divided into 5 sections:
+The `app.py` Streamlit dashboard makes the model usable by anyone, no Python required. It reads the processed datasets and PCA coordinates and exposes five tabs, ordered from one-to-one comparison up to league-level aggregation:
 
-* **🔍 Clone Finder:** Select a target player and use the Euclidean Distance similarity engine to find their top tactical replacements. Includes interactive radar chart comparisons.
-* **🧬 Player DNA:** Explore a specific player's tactical membership (Soft Clustering percentages) to see their core playstyle.
-* **🌍 Market Explorer:** Filter the dataset by tactical profile and minutes played to identify specific defender types.
-* **📊 Metric Explorer:** Cross-analyze the 9 standardized PAdj metrics through dynamic scatter plots colored by tactical profile.
-* **🛡️ Team DNA:** View how Serie A teams build their defensive lines, aggregated by the minutes played by each tactical profile (visualized via Donut and Stacked Bar charts).
+* **🔍 Clone Finder:** pick a target defender and get the top *N* tactical replacements ranked by **Similarity %** (min-max normalized Euclidean distance in the 4-D PCA space, where 100% = the two most similar defenders in the dataset and 0% = the two most different). Side-by-side interactive radar comparison on z-score scale.
+* **🧬 Player DNA:** view a defender's **soft-cluster membership** across the four profiles, plus a *Tactical Identity* classifier (Specialist / Hybrid / Allrounder) computed from the top-membership percentage. Also surfaces the three most similar defenders in the league.
+* **📊 Metric Explorer:** cross-analyze any two of the 9 PAdj defensive metrics on a scatter plot colored by tactical profile. The chart auto-highlights the top-3 and bottom-3 performers (most extreme cases in the top-right and bottom-left quadrants by normalized Euclidean distance from the league means) and reports the **Pearson correlation** between the two metrics in real time.
+* **🌍 Market Explorer:** filter the dataset by tactical profile, rank by Tactical DNA % or minutes played, and view a per-90 PAdj table (tackles, interceptions, possessions won, blocks, clearances, ground/aerial duels volume & win-rate). Useful as a shortlist generator.
+* **🛡️ Team DNA:** league-wide stacked bar (all 20 teams, profile share weighted by minutes) plus a per-team deep-dive donut chart and roster table. Shows how each team builds its defensive line.
 
 ---
 
 ## 🧠 Under the Hood: The Data Science Pipeline
-The core engine driving the app is the `Clustering_defenders_SerieA.ipynb` notebook. The analysis strictly follows these methodological steps to ensure statistical validity:
+Full reproducible analysis in [`Clustering_defenders_SerieA.ipynb`](Clustering_defenders_SerieA.ipynb). The pipeline runs end-to-end in seven steps:
 
-* **Handling Team Bias (PAdj):** Applying Possession-Adjusted formulas to volume metrics to ensure fair comparisons between players in dominant teams vs. low-block teams.
-* **Feature Scaling:** Z-Score Standardization to bring percentages and volume metrics onto the same mathematical scale.
-* **Exploratory Data Analysis (EDA):**
-  * Post-standardization Outlier Detection.
-  * Correlation Matrix Heatmap to analyze mathematical relationships between defensive actions.
-  * Scatterplot visualizations to map physical and tactical tendencies.
-* **Dimensionality Reduction (PCA):** Compressing the 9 core defensive variables into a 4-dimensional tactical space.
-* **Clustering & Profiling:**
-  * **Hierarchical Clustering:** Using dendrograms to define the optimal number of groups (K=4).
-  * **K-Means Clustering:** Applied on the PCA-reduced coordinates.
-  * **Cluster Profiling & Comparison:** Translating mathematical clusters into the four football-meaningful profiles described above.
-* **Advanced Player Segmentation:**
-  * **Soft Clustering (Membership %):** Calculating a player's proximity to all centroids to define their Tactical Identity.
-  * **Tactical Extremes:** Identifying pure Specialists vs. versatile Hybrids.
-  * **Local Outlier Factor (LOF):** Detecting tactical anomalies and isolated player profiles.
-* **Scouting Framework:**
-  * **Player Similarity:** Using Euclidean Distance to find tactical clones.
-  * **Team Tactical DNA:** Profiling the defensive systems of Serie A teams by weighting the clusters by minutes played.
+1. **Possession Adjustment (PAdj).** Volume metrics rescaled as if every team had 50% possession (`x_padj = x · 50 / (100 - team_poss)`), so defenders from high- and low-possession teams sit on the same scale.
+2. **Z-score standardization.** Mandatory for scale-sensitive methods downstream (PCA, K-Means). Applied to all 9 features (volume PAdj + win-rate percentages).
+3. **EDA.** Correlation matrix, four tactical scatter maps (Ground vs Tackles, Tackles vs Interceptions, Clearances vs Blocks, Ground vs Aerial volume), post-standardization outlier check.
+4. **PCA, 9 → 4 components.** Cumulative variance retained, biplot to inspect which raw metrics drive each component.
+5. **Clustering.**
+   * Ward's hierarchical clustering on the PCA space → dendrogram cut at t=10 produces 4 macro-groups separated by a large vertical gap (a visual stability signal).
+   * **K-Means K=4** initialised from the hierarchical centroids (not random, not k-means++), so the assignment is deterministic and football-interpretable.
+   * Validation via **Silhouette** and **Davies-Bouldin** scores at K=3, 4, 5. K=4 chosen as the trade-off between separation and tactical granularity.
+6. **Cluster profiling & auto-naming.** Names assigned data-driven from centroid z-score signatures (no hand-labelling), robust to cluster-ID permutations across runs. Profiling reports raw PAdj averages vs the league for each cluster and a comparison radar.
+7. **Player- and team-level outputs.**
+   * **Soft clustering (membership %)**: each player gets a 4-vector of proximities to the centroids; the maximum determines whether they are a *Specialist*, *Hybrid* or *Allrounder*.
+   * **Local Outlier Factor (LOF)** flags defenders who sit far from every cluster — genuine tactical outliers.
+   * **Team Tactical DNA** aggregates individual cluster assignments back up to the team level weighted by minutes played, surfacing the team's defensive identity.
 
 ---
 
@@ -76,64 +73,38 @@ Raw defensive event data and metrics are powered by **Opta / Stats Perform** (ac
 
 ## 📓 Notebook Preview
 
-The full analysis pipeline lives in [`Clustering_defenders_SerieA.ipynb`](Clustering_defenders_SerieA.ipynb), an end-to-end notebook with executed outputs and inline interpretation of every chart.
-
-For a quick read without cloning the repo or running Jupyter, an **HTML render** is also published: [`Clustering_defenders_SerieA.html`](Clustering_defenders_SerieA.html).
-
-An earlier mid-season snapshot of the same pipeline (March 2026 data, 68 players) is preserved in [`archive_march_2026/`](archive_march_2026/) for the stability comparison below.
+The full analysis pipeline lives in [`Clustering_defenders_SerieA.ipynb`](Clustering_defenders_SerieA.ipynb), an end-to-end notebook with executed outputs and inline interpretation of every chart. For a quick read without cloning the repo, an **HTML render** is also published: [`Clustering_defenders_SerieA.html`](Clustering_defenders_SerieA.html).
 
 ---
 
 ## 🔁 Stability Check: March vs End-of-Season
 
-A standard concern with K-Means on a small dataset is **stability**: would the same pipeline produce similar clusters if re-run with more data? To answer this, the analysis was performed twice:
+The same pipeline was run twice — on a mid-season snapshot (March 2026, ≥800', 68 players) and at end-of-season (May 2026, ≥1000', 77 players) — to check whether the cluster assignments hold up as more data arrives. An earlier snapshot is preserved in [`archive_march_2026/`](archive_march_2026/).
 
-| Run | Dataset | Mins threshold | N players |
-|---|---|---|---|
-| **March snapshot** | Mid-season (March 2026) | ≥800' | 68 |
-| **End of season** | Full-season (May 2026) | ≥1000' | 77 |
+On the **67 players in common**, **63% kept the same cluster**. Two findings worth noting:
 
-**Result on the 67 players in common:**
+- **Aggressors are 100% stable** (17/17): Bastoni, Mancini, Akanji, Bisseck, Hien and others all stay Aggressors. This is the most robust archetype.
+- **The Aerial Stopper ↔ Coverage Defender boundary is the most fluid** (~17 transitions). Football-meaningful: a defender who clears a lot in a deep block looks more "Aerial" with 800' of data and more "Coverage" with 2500', as volume per 90 settles.
 
-| Outcome | Count | % |
-|---|---|---|
-| **Same cluster** in both runs | 42 | **62.7%** |
-| Moved to a different cluster | 25 | 37.3% |
-
-**Transition matrix** (rows = March profile, columns = End-of-season profile):
-
-| March \ End | Aggressor | Aerial Stopper | Ground Specialist | Coverage Defender |
-|---|---:|---:|---:|---:|
-| **Aggressor** | **17** | 0 | 0 | 0 |
-| **Aerial Stopper** | 1 | **9** | 0 | 10 |
-| **Ground Specialist** | 0 | 1 | **2** | 5 |
-| **Coverage Defender** | 1 | 0 | 7 | **14** |
-
-### Reading the result
-
-- **Aggressors are the most stable profile** (17/17 = 100%). Players like Mancini, Bastoni, Akanji, Bisseck, Hien stayed Aggressors with more data, confirming this is a robust archetype.
-- **The Aerial Stopper ↔ Coverage Defender boundary is the most fluid** (10 + 7 = 17 transitions between these two). This is football-meaningful: a defender who clears the ball often in a deep block may look like an "Aerial Stopper" with 800' of data and a "Coverage Defender" with 2500', because the volume per 90 normalizes differently as games accumulate.
-- **One notable promotion:** Bremer moved from *Aerial Stopper* (March) to *Aggressor* (end of season), consistent with his role evolution at Juventus through the year.
-
-**Why this matters.** 62.7% stability is not stellar but it is **honest**: with 77 players across 4 clusters, the boundaries should shift somewhat as more data arrives. The core archetypes (especially Aggressor) are real and robust; the boundary cases need more data to settle. This is precisely the kind of caveat a portfolio project should expose, not hide.
+63% is not stellar but is honest for K=4 on 77 points. The core archetypes are real; boundary cases need more data to settle, which is the *expected* behaviour, not a bug.
 
 ---
 
 ## ⚠️ Limitations & Future Work
 
-Transparency on what this engine does **not** capture is as important as what it does. Known limitations:
+**Limitations** of this iteration:
 
-* **Sample size.** With 77 players across 4 clusters (~19 per cluster on average), the clustering boundaries are stable but not bulletproof (see the [stability check](#-stability-check--march-vs-end-of-season) above for an empirical measurement). A single player at the edge of two profiles could be re-assigned with marginally different input data.
-* **Defensive scope only.** The engine intentionally ignores **build-up and on-ball metrics** (progressive passes, carries, pass completion under pressure). A modern centre-back like Bastoni is not fully captured by his defensive volume alone. This is a deliberate scope choice for this iteration, not an oversight.
-* **Volume vs. quality.** PAdj normalises for possession, but cannot fully distinguish *"low engagement because the team funnels play away"* from *"low engagement because the defender is not involved enough"*. This is why **C3 is labelled neutrally as "Coverage Defender"** rather than something aspirational like "Recovery Specialist".
-* **No temporal dynamics.** Stats are season-cumulative. A defender who changed role mid-season is averaged across both roles.
-* **Similarity score calibration.** The Similarity % formula ($e^{-0.15 \cdot d}$) is designed for ranking, not for absolute comparison. The coefficient is chosen so that the median pairwise distance maps to a recognisable mid-range value; use the ordering, not the absolute number.
+* **Sample size.** 77 players across 4 clusters (~19 each). Clusters are interpretable but boundary cases can shift with marginally different input data (see the [stability check](#-stability-check-march-vs-end-of-season) above).
+* **Defensive scope only.** Build-up and on-ball metrics (progressive passes, carries, pass completion under pressure) are deliberately out of scope. A modern centre-back like Bastoni is not fully described by defensive volume alone.
+* **Volume vs. quality.** PAdj corrects for possession but cannot fully separate *"low engagement because the team funnels play away"* from *"low engagement because the defender is not involved enough"*. The Coverage Defender label is intentionally neutral for this reason.
+* **No temporal dynamics.** Stats are season-cumulative — a defender who changed role mid-season is averaged across both roles.
+* **Similarity % is a ranking score, not an absolute one.** It is min-max normalized on the *Serie A* pairwise distance range, so values are meaningful within this dataset but not directly transferable across leagues.
 
-**Planned next iterations:**
-1. **Multi-league expansion** (top 5 European leagues) to grow sample size 5-10x and stabilise cluster boundaries.
-2. **Build-up dimension**: add a parallel set of on-ball metrics and produce a **2-axis profile** (defensive × possession) instead of a single defensive label.
-3. **Per-match data** instead of season cumulative, to detect role changes and form trends throughout the season.
-4. **Prospect predictor**: train a classifier on the labelled dataset to predict which tactical profile a Serie B or Primavera defender would fit if promoted to Serie A.
+**Future work** — natural next iterations:
+
+1. **Multi-league expansion** to top-5 leagues, growing the sample and stabilising boundaries.
+2. **Add a build-up dimension** alongside the defensive one, producing a 2-axis profile instead of a single label.
+3. **Per-match data** instead of season cumulative, to detect role changes and form trends.
 
 ---
 

@@ -157,9 +157,9 @@ with tab1:
             hide_index=True,
             column_config={
                 'Player': st.column_config.TextColumn(width='medium'),
-                'Team': st.column_config.TextColumn(width='medium'),
+                'Team': st.column_config.TextColumn(width='small'),
                 'Profile': st.column_config.TextColumn(width='medium'),
-                'Similarity %': st.column_config.NumberColumn(format='%.1f%%', width='medium'),
+                'Similarity %': st.column_config.NumberColumn(format='%.1f%%', width='small'),
             }
         )
 
