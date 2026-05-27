@@ -239,7 +239,7 @@ with tab2:
         },
         "Ground Specialist": {
             "name": "Ground Specialist",
-            "desc": "Decent ground engagement (Ground Duels +10%) but a marked weakness in the air: very low aerial volume (-29%) and the lowest aerial win rate of the four profiles (~49%, -9pp vs league avg). Fits as a wide centre-back in a back three or as a technical defender in possession-based sides where the team prevents aerial duels from occurring. Most represented at: Milan, Cagliari, Fiorentina."
+            "desc": "High ground engagement (Ground Duels engaged +10%) but a clear aerial weakness: very low aerial volume (-29%) and the lowest aerial win rate of the four profiles (~49%, -9pp vs league avg). The label captures *where* these defenders engage (on the ground, not in the air), reflecting a profile shaped by aerial limitations rather than ground dominance. Fits as a wide centre-back in a back three or as a technical defender in possession-based sides that minimize aerial situations. Most represented at: Milan, Cagliari, Fiorentina."
         },
         "Coverage Defender": {
             "name": "Coverage Defender",
@@ -342,8 +342,8 @@ with tab2:
         * **Tactical Profile:** Classic stay-at-home centre-back. Holds the defensive line, absorbs pressure, dominates the box aerially. Top sources: Hellas Verona, Como, Lecce.
 
         **🟢 Ground Specialist**
-        * **Data Signature:** Decent ground volume (Ground Duels +10%, Tackles +3%) but a clear aerial weakness: Aerial Duels engaged -29% and the lowest Aerial win rate of the four profiles (~49%, -9pp vs league avg). Clearances are also low (-28%).
-        * **Tactical Profile:** Defenders who thrive in ground actions but are physically out-matched in the air. Often deployed as a wide centre-back in a back three or as a technical defender in possession-based teams that prevent aerial duels from happening. Top sources: Milan, Cagliari, Fiorentina.
+        * **Data Signature:** High Ground Duels volume (+10%) and decent Tackles (+3%), with a clear aerial weakness: Aerial Duels engaged -29%, the lowest Aerial win rate of the four profiles (~49%, -9pp vs league avg), and low Clearances (-28%).
+        * **Tactical Profile:** Defenders whose engagement happens on the ground rather than in the air. Their tactical value lies in *being technically available* on the ground in systems built to neutralise aerial situations — high lines, possession football, back-three setups with wide CBs. The profile is defined by what these defenders avoid (aerial duels), not by what they dominate. Top sources: Milan, Cagliari, Fiorentina.
 
         **🟠 Coverage Defender**
         * **Data Signature:** Below league average across most volume metrics: Tackles -19%, Pos Won -24%, Ground Duels engaged -20%, Aerial Duels engaged -12%. Blocks slightly above average (+14%).
