@@ -12,9 +12,9 @@ st.set_page_config(page_title="Serie A Scouting Engine", layout="wide", page_ico
 # Data Loading 
 @st.cache_data
 def load_data():
-    df = pd.read_csv('processed_defenders_data.csv')
-    df_pca = pd.read_csv('pca_coordinates.csv')
-    with open('radar_metrics.json', 'r') as f:
+    df = pd.read_csv('data/processed_defenders_data.csv')
+    df_pca = pd.read_csv('data/pca_coordinates.csv')
+    with open('data/radar_metrics.json', 'r') as f:
         radar_features = json.load(f)
     return df, df_pca, radar_features
 
@@ -37,7 +37,7 @@ DIST_MIN, DIST_MAX = get_distance_bounds(df_pca)
 # Cluster naming is loaded dynamically from cluster_name_map.json
 # so the notebook can re-assign cluster integer IDs without breaking the app.
 try:
-    with open('cluster_name_map.json', 'r') as f:
+    with open('data/cluster_name_map.json', 'r') as f:
         _name_map_raw = json.load(f)
     CLUSTER_NAMES = {int(k): v for k, v in _name_map_raw.items()}
 except FileNotFoundError:
