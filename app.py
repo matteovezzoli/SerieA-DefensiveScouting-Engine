@@ -502,7 +502,30 @@ with tab3:
     # Combined list of players to highlight
     dynamic_highlights = top_right_3 + bottom_left_3
     # -----------------------------------------------------------------
-    
+
+    # Top / Bottom performers callout (shown above the chart for quick reading)
+    col_top, col_bot = st.columns(2)
+    with col_top:
+        if top_right_3:
+            st.markdown(
+                f"**🟢 Top performers** (high {x_label} **and** high {y_label}): "
+                + ", ".join(f"**{p}**" for p in top_right_3)
+            )
+        else:
+            st.markdown(f"**🟢 Top performers**: no player above the mean on both axes.")
+    with col_bot:
+        if bottom_left_3:
+            st.markdown(
+                f"**🔴 Bottom performers** (low {x_label} **and** low {y_label}): "
+                + ", ".join(f"**{p}**" for p in bottom_left_3)
+            )
+        else:
+            st.markdown(f"**🔴 Bottom performers**: no player below the mean on both axes.")
+    st.caption(
+        "Highlighted players are the most extreme cases in each diagonal quadrant, "
+        "measured by normalized Euclidean distance from the league means on the two selected metrics."
+    )
+
     cluster_names_map = {i: CLUSTER_NAMES[i] for i in range(4)}
     df_plot['Tactical Profile'] = df_plot['Cluster'].map(cluster_names_map)
     color_map = {cluster_names_map[i]: cluster_colors[i] for i in range(4)}
@@ -523,15 +546,15 @@ with tab3:
             for _, row in df_sub.iterrows():
                 name = row['name']
                 if name in dynamic_highlights:
-                    texts.append(f"<b>{name}</b>") 
-                    text_colors.append(color)    
-                    text_sizes.append(13)          
-                    marker_sizes.append(14)        
+                    texts.append(f"<b>{name}</b>")
+                    text_colors.append("dimgray")
+                    text_sizes.append(13)
+                    marker_sizes.append(14)
                 else:
-                    texts.append(name)             
-                    text_colors.append("dimgray") 
-                    text_sizes.append(9)           
-                    marker_sizes.append(10)        
+                    texts.append(name)
+                    text_colors.append("dimgray")
+                    text_sizes.append(9)
+                    marker_sizes.append(10)
             
             # Add the trace for this specific Cluster
             fig_scatter.add_trace(go.Scatter(
@@ -592,29 +615,6 @@ with tab3:
     st.caption(
         "All per-90 volume metrics shown here are **possession-adjusted (PAdj)** — rescaled as if every team had 50% possession, so defenders from high- and low-possession teams are directly comparable. "
         "Win-rate metrics (Ground Duels %, Aerial Duels %) are already ratios and not adjusted. See the methodology expander above for details."
-    )
-
-    # Top / Bottom performers callout
-    col_top, col_bot = st.columns(2)
-    with col_top:
-        if top_right_3:
-            st.markdown(
-                f"**🟢 Top performers** (high {x_label} **and** high {y_label}): "
-                + ", ".join(f"**{p}**" for p in top_right_3)
-            )
-        else:
-            st.markdown(f"**🟢 Top performers**: no player above the mean on both axes.")
-    with col_bot:
-        if bottom_left_3:
-            st.markdown(
-                f"**🔴 Bottom performers** (low {x_label} **and** low {y_label}): "
-                + ", ".join(f"**{p}**" for p in bottom_left_3)
-            )
-        else:
-            st.markdown(f"**🔴 Bottom performers**: no player below the mean on both axes.")
-    st.caption(
-        "Highlighted players are the most extreme cases in each diagonal quadrant, "
-        "measured by normalized Euclidean distance from the league means on the two selected metrics."
     )
 # ==========================================
 # TAB 5: TEAM DNA
